@@ -78,20 +78,19 @@ export function computeScore(stats: Stats, decisionPoints: number): number {
 
 /**
  * Berechnet den verfügbaren Verteil-Topf aus dem aktuellen Cash-Stand.
- * Entspricht der pot-Formel aus dem HTML-Prototyp:
- *   Math.min(18000, Math.floor(cash / 3000) * 3000)
+ * Granularität jetzt 500er-Schritte (Slider), Maximum bleibt €18.000.
  */
 export function computeAllocationPot(cash: number): number {
   return Math.min(
     ALLOCATION.maxPot,
-    Math.floor(cash / ALLOCATION.step) * ALLOCATION.step
+    Math.floor(cash / 500) * 500
   );
 }
 
 /**
  * Wendet eine vollständige Allokations-Entscheidung auf den Stats-Stand an.
- * amounts[i] ist der Betrag (in Schritten à ALLOCATION.step), der in den
- * i-ten Bucket geflossen ist. Je Schritt: +gainPerStep auf den Ziel-Stat,
+ * amounts[i] ist der Betrag in Euro, der in den i-ten Bucket fließt (beliebige
+ * 500er-Vielfache). Gain je Bucket = Math.round(amount / 3000 * gainPer3000),
  * Gesamtbetrag wird von cash abgezogen (min. 0).
  */
 export function applyAllocation(stats: Stats, amounts: number[]): Stats {
@@ -100,8 +99,10 @@ export function applyAllocation(stats: Stats, amounts: number[]): Stats {
   amounts.forEach((amt, i) => {
     const bucket = ALLOCATION.buckets[i];
     if (!bucket) return;
-    const steps = Math.floor(amt / ALLOCATION.step);
-    next[bucket.stat] = Math.max(0, next[bucket.stat] + steps * ALLOCATION.gainPerStep);
+    // Gain proportional zu €3.000-Einheiten — identisches Ergebnis bei altem €3k-Stepper,
+    // aber jetzt auch für 500er-Zwischenwerte korrekt.
+    const gain = Math.round((amt / 3000) * ALLOCATION.gainPer3000);
+    next[bucket.stat] = Math.max(0, next[bucket.stat] + gain);
     totalSpent += amt;
   });
   next.cash = Math.max(0, next.cash - totalSpent);

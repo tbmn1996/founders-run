@@ -96,10 +96,10 @@ export interface AllocationBucket {
 export const ALLOCATION = {
   /** Maximaler Topf, der verteilt werden kann. */
   maxPot: 18000,
-  /** Schrittgröße pro Bucket-Erhöhung. */
-  step: 3000,
-  /** Stat-Punkte pro Schritt auf den gewählten Bucket. */
-  gainPerStep: 4,
+  /** Slider-Granularität in Euro (500er-Schritte). */
+  step: 500,
+  /** Stat-Punkte je €3.000, die in einen Bucket fließen. */
+  gainPer3000: 4,
   /** Feste Bonus-Punkte fürs Abschließen der Verteil-Runde. */
   bonusPoints: 12,
   buckets: [
@@ -711,14 +711,6 @@ export const LUCK_EVENTS: LuckEvent[] = [
       "Du bist dem Venture Club Münster beigetreten und triffst dort erfahrene Gründer:innen, die dir mit Rat und Kontakten den Rücken stärken.",
     effects: { community: 10, innovation: 4 },
   },
-  // TODO: Inhalt nach Merchant-Lab-Recherche, erst nach Freigabe aktivieren
-  // {
-  //   id: "verein-merchant-lab",
-  //   category: "verein",
-  //   title: "Merchant Lab — Platzhalter",
-  //   text: "TODO: Inhalt nach Merchant-Lab-Recherche einfügen.",
-  //   effects: {},
-  // },
 
   // --- Markt-Events (MARKET_EVENTS) ---
   {

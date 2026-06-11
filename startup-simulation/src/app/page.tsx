@@ -12,8 +12,7 @@ import {
   ChevronDown,
   Check,
   X,
-  Minus,
-  Plus,
+  Share2,
 } from "lucide-react";
 import StatBar from "@/components/StatBar";
 import {
@@ -511,9 +510,12 @@ function EventCard({ event, onAdvance }: { event: LuckEvent; onAdvance: () => vo
 /**
  * Verteil-Runde: Der Pot wird BEIM MOUNT aus dem aktuellen cash-Stand berechnet.
  * Drei Zustände:
- *   1. Pot < 3.000  → „Kasse fast leer"-Screen, direkt Weiter
- *   2. Verteilen    → Stepper je Bucket, „Noch zu verteilen"-Anzeige
- *   3. Bestätigt    → Effekt-Chips der Gains, Weiter-Button
+ *   1. Pot < 500   → „Kasse fast leer"-Screen, direkt Weiter
+ *   2. Verteilen   → Range-Slider je Bucket (500er-Schritte), „Noch zu verteilen"-Anzeige
+ *   3. Bestätigt   → Effekt-Chips der Gains, Weiter-Button
+ *
+ * Constraint: Wenn ein Slider bewegt wird und die Summe den Pot übersteigt,
+ * wird der bewegte Slider auf das verbleibende Maximum gekappt.
  */
 function AllocationCard({
   stats,
@@ -522,10 +524,10 @@ function AllocationCard({
   stats: Stats;
   onFinish: (amounts: number[]) => void;
 }) {
-  // Pot aus aktuellem Cash-Stand berechnen (nach Phase 3)
+  // Pot aus aktuellem Cash-Stand berechnen (500er-Granularität)
   const pot = computeAllocationPot(stats.cash);
 
-  // amounts[i] = in Bucket i investierter Betrag (Vielfaches von ALLOCATION.step)
+  // amounts[i] = in Bucket i investierter Betrag (Vielfaches von 500)
   const [amounts, setAmounts] = useState<number[]>(
     ALLOCATION.buckets.map(() => 0)
   );
@@ -576,9 +578,9 @@ function AllocationCard({
     amounts.forEach((amt, i) => {
       const bucket = ALLOCATION.buckets[i];
       if (!bucket || amt === 0) return;
-      const steps = Math.floor(amt / ALLOCATION.step);
+      const gain = Math.round((amt / 3000) * ALLOCATION.gainPer3000);
       const key = bucket.stat as StatKey;
-      gains[key] = (gains[key] ?? 0) + steps * ALLOCATION.gainPerStep;
+      gains[key] = (gains[key] ?? 0) + gain;
     });
     // Cash-Abzug als negativer Wert
     if (used > 0) gains.cash = -used;
@@ -625,11 +627,18 @@ function AllocationCard({
     );
   }
 
-  // ---------- Zustand 2: Verteilen ----------
-  function adjust(i: number, delta: number) {
+  // ---------- Zustand 2: Slider-Verteilen ----------
+  /**
+   * Slider-Handler: neuen Wert kappen, damit Gesamtsumme ≤ pot bleibt.
+   * Alle anderen Slider bleiben unverändert — einfachste robuste Variante.
+   */
+  function handleSlider(i: number, newVal: number) {
     setAmounts((prev) => {
       const next = [...prev];
-      next[i] = next[i] + delta;
+      // Summe der anderen Buckets
+      const otherSum = prev.reduce((s, a, j) => (j === i ? s : s + a), 0);
+      // Auf verbleibendes Maximum kappen
+      next[i] = Math.min(newVal, pot - otherSum);
       return next;
     });
   }
@@ -647,61 +656,46 @@ function AllocationCard({
       </h2>
       <p className="mt-1.5 text-[12.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
         Du hast <strong>{formatMoney(pot)}</strong> zu investieren.
-        Je {formatMoney(ALLOCATION.step)} bringen +{ALLOCATION.gainPerStep} Punkte auf den gewählten Bereich.
+        Je €3.000 bringen +{ALLOCATION.gainPer3000} Punkte auf den gewählten Bereich.
       </p>
 
-      {/* Bucket-Zeilen */}
-      <div className="mt-4 flex flex-col gap-3">
-        {ALLOCATION.buckets.map((bucket, i) => {
-          const canMinus = amounts[i] >= ALLOCATION.step;
-          const canPlus  = remaining >= ALLOCATION.step;
-          return (
-            <div key={bucket.stat} className="flex items-center gap-2">
-              {/* Emoji + Label */}
-              <span className="text-base">{bucket.emoji}</span>
-              <span
-                className="flex-1 text-[13px] font-medium"
-                style={{ color: "var(--foreground)" }}
-              >
+      {/* Slider-Zeilen — Touchziel ≥ 44px je Zeile */}
+      <div className="mt-4 flex flex-col gap-4">
+        {ALLOCATION.buckets.map((bucket, i) => (
+          <div key={bucket.stat} className="flex min-h-[44px] flex-col gap-1">
+            {/* Kopfzeile: Emoji + Label + Live-Betrag */}
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>
+                <span className="mr-1">{bucket.emoji}</span>
                 {bucket.label}
               </span>
-              {/* Betrag */}
               <span
-                className="w-16 text-right text-[13px] font-semibold tabular-nums"
+                className="text-[13px] font-bold tabular-nums"
                 style={{ color: amounts[i] > 0 ? "var(--accent)" : "var(--muted)" }}
               >
                 {formatMoney(amounts[i])}
               </span>
-              {/* − Stepper — Touchziel ≥ 44px */}
-              <button
-                onClick={() => adjust(i, -ALLOCATION.step)}
-                disabled={!canMinus}
-                className="flex h-11 w-11 items-center justify-center rounded-full"
-                style={{
-                  background: canMinus ? "var(--surface-3)" : "transparent",
-                  opacity: canMinus ? 1 : 0.3,
-                }}
-                aria-label={`${bucket.label} verringern`}
-              >
-                <Minus size={16} />
-              </button>
-              {/* + Stepper */}
-              <button
-                onClick={() => adjust(i, ALLOCATION.step)}
-                disabled={!canPlus}
-                className="flex h-11 w-11 items-center justify-center rounded-full"
-                style={{
-                  background: canPlus ? "rgba(255,94,0,0.12)" : "transparent",
-                  color: canPlus ? "var(--accent)" : "var(--muted)",
-                  opacity: canPlus ? 1 : 0.3,
-                }}
-                aria-label={`${bucket.label} erhöhen`}
-              >
-                <Plus size={16} />
-              </button>
             </div>
-          );
-        })}
+            {/* Range-Slider — accent-color aus CSS-Token */}
+            <input
+              type="range"
+              min={0}
+              max={pot}
+              step={ALLOCATION.step}
+              value={amounts[i]}
+              onChange={(e) => handleSlider(i, Number(e.target.value))}
+              aria-label={bucket.label}
+              className="w-full"
+              style={{
+                accentColor: "var(--accent)",
+                // Touch-Daumen ≥ 24px wird über globals.css gesteuert;
+                // height sorgt für ausreichendes Touchziel
+                height: "24px",
+                cursor: "pointer",
+              }}
+            />
+          </div>
+        ))}
       </div>
 
       {/* „Noch zu verteilen"-Anzeige */}
@@ -737,6 +731,12 @@ function AllocationCard({
  * Alloc-Runde taucht im Rückblick NICHT auf (nur DecisionRecords),
  * aber die +12 Bonus-Punkte sind im points-State enthalten und fließen
  * über computeScore in den angezeigten Score ein.
+ *
+ * Enthält:
+ * - VCM-Logo (/logos/vcm.png) unter dem Founder-Typ-Emoji
+ * - Teilen-Button mit Web Share API (Fallback: Clipboard)
+ *
+ * Founders-Map-Hooks NICHT angefasst.
  */
 function Result({
   stats,
@@ -752,6 +752,28 @@ function Result({
   const score = computeScore(stats, points);
   const type  = determineFounderType(stats);
   const [showClosing, setShowClosing] = useState(false);
+  // Steuert das kurzfristige „Kopiert ✓"-Feedback beim Clipboard-Fallback
+  const [copied, setCopied] = useState(false);
+
+  /** Teilen-Funktion: Web Share API, Fallback Clipboard. */
+  async function handleShare() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const text = `Ich bin ${type.emoji} ${type.name} mit ${score} Punkten bei Founder's Run — der Startup-Simulation des Venture Club Münster! ${url}`;
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        // Web Share API — öffnet natives Teilen-Sheet auf dem Smartphone
+        await navigator.share({ title: "Founder's Run · Mein Ergebnis", text });
+      } else {
+        // Desktop-Fallback: Text in die Zwischenablage kopieren
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        // Label nach 2 Sekunden zurücksetzen
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // Nutzer hat Teilen-Dialog abgebrochen — kein Fehler
+    }
+  }
 
   if (showClosing) return <Closing onRestart={onRestart} />;
 
@@ -767,6 +789,17 @@ function Result({
       <div className="glass-card p-6 text-center">
         <span className="section-label">Dein Ergebnis</span>
         <div className="mt-2 text-5xl">{type.emoji}</div>
+        {/* VCM-Logo — dezent unter dem Founder-Emoji */}
+        <div className="mx-auto mt-3 flex h-7 w-auto items-center justify-center">
+          <Image
+            src="/logos/vcm.png"
+            alt="Venture Club Münster"
+            width={80}
+            height={28}
+            unoptimized
+            className="object-contain opacity-80"
+          />
+        </div>
         <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.03em]">{type.name}</h1>
         <p className="mt-1 text-sm font-medium gradient-accent-text">{type.tagline}</p>
         <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed" style={{ color: "var(--muted)" }}>
@@ -779,6 +812,14 @@ function Result({
             Punkte
           </span>
         </div>
+        {/* Teilen-Button */}
+        <button
+          onClick={handleShare}
+          className="btn btn-glass mt-4 flex w-full items-center justify-center gap-2 py-2.5 text-[14px]"
+        >
+          <Share2 size={16} />
+          {copied ? "Kopiert ✓" : "Ergebnis teilen"}
+        </button>
       </div>
 
       {/* Werte final */}

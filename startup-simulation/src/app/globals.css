@@ -1,0 +1,200 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   Aura v2 — Design-Tokens (aus DESIGN_SYSTEM.md des SC-PWA-Projekts).
+   Dark-Mode ist Standard; .light auf <html> schaltet um.
+   ========================================================================== */
+
+:root,
+.dark {
+  /* Marke / CI */
+  --ci-orange: #f76c07;
+  --ci-red: #fe281f;
+  --bg-orange: #b5441a;
+  --bg-red: #8a3018;
+
+  /* Akzent */
+  --accent: #ff5e00;
+  --accent-mid: #ff7a1a;
+  --accent-end: #ff9233;
+  --accent-hover: #ff7520;
+  --glow: #ff6a10;
+
+  /* Dark-Mode Flächen */
+  --background: #141414;
+  --background-raised: #1c1c1c;
+  --foreground: #edebe8;
+  --foreground-pure: #f5f5f5;
+  --surface-1: #1c1c1c;
+  --surface-2: #242424;
+  --surface-3: #2c2c2c;
+  --highlight: #edebe8;
+  --highlight-text: #1a1a1a;
+  --muted: #888888;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-border: rgba(255, 255, 255, 0.09);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --navbar-bg: rgba(20, 20, 20, 0.88);
+
+  /* Status */
+  --success: #4ade80;
+  --error: #f87171;
+
+  /* Form */
+  --radius-card: 24px;
+  --radius-inner: 16px;
+  --radius-pill: 20px;
+
+  /* Schatten */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.28);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.35);
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.light {
+  --background: #f5f5f5;
+  --background-raised: #ffffff;
+  --foreground: #1a1a1a;
+  --foreground-pure: #111111;
+  --surface-1: #ffffff;
+  --surface-2: #f5f4f2;
+  --surface-3: #eceae7;
+  --highlight: #3a3a3a;
+  --highlight-text: #edebe8;
+  --muted: #71717a;
+  --border: rgba(0, 0, 0, 0.06);
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --input-bg: rgba(0, 0, 0, 0.03);
+  --input-border: rgba(0, 0, 0, 0.1);
+  --overlay: rgba(0, 0, 0, 0.3);
+  --navbar-bg: rgba(245, 245, 245, 0.9);
+  --accent-hover: #e55500;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.09);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.12);
+}
+
+/* Tailwind v4: Tokens als Theme-Variablen verfügbar machen */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  margin: 0;
+  min-height: 100dvh;
+}
+
+/* --- Signatur-Hintergrund: warmer Orange-Glow + Grain --- */
+.bg-mesh {
+  background-image:
+    radial-gradient(60% 50% at 15% 0%, rgba(255, 94, 0, 0.05), transparent 70%),
+    radial-gradient(50% 50% at 100% 100%, rgba(255, 94, 0, 0.035), transparent 70%);
+  background-attachment: fixed;
+}
+.light .bg-mesh {
+  background-image:
+    radial-gradient(60% 50% at 15% 0%, rgba(255, 94, 0, 0.02), transparent 70%),
+    radial-gradient(50% 50% at 100% 100%, rgba(255, 94, 0, 0.015), transparent 70%);
+}
+
+/* --- Karten --- */
+.glass-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.glass-card-inner {
+  background: var(--surface-2);
+  border-radius: var(--radius-inner);
+}
+
+/* --- Buttons --- */
+.btn {
+  border-radius: var(--radius-inner);
+  font-weight: 600;
+  transition: transform 0.15s var(--ease-out-expo), background 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn-primary {
+  position: relative;
+  background:
+    linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+    linear-gradient(135deg, var(--ci-orange), var(--ci-red)) border-box;
+  border: 1.5px solid transparent;
+  color: var(--foreground);
+}
+.light .btn-primary {
+  background:
+    linear-gradient(var(--background-raised), var(--background-raised)) padding-box,
+    linear-gradient(135deg, var(--ci-orange), var(--ci-red)) border-box;
+}
+.btn-dark {
+  background: var(--highlight);
+  color: var(--highlight-text);
+  border: none;
+}
+.btn-glass {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.gradient-accent-text {
+  background: linear-gradient(135deg, var(--ci-orange), var(--ci-red));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* --- Motion-Keyframes --- */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s var(--ease-out-expo) both;
+}

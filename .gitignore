@@ -1,0 +1,11 @@
+# Abhängigkeiten & Build-Artefakte (Next.js)
+node_modules/
+.next/
+out/
+
+# macOS-Finder-Metadaten
+.DS_Store
+
+# Logs & lokale Umgebung
+*.log
+.env*

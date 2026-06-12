@@ -564,6 +564,16 @@ function DecisionCard({
       <h2 className="mt-1.5 text-[22px] font-bold leading-snug tracking-[-0.02em]">
         {scenario.title}
       </h2>
+      {scenario.referenceText && (
+        /* "Weil ihr..."-Zeile (S4): markergebundenes Phase-5-Szenario erklärt
+           seinen Bezug zur früheren Entscheidung — kommt aus der TSV-Spalte "bezug" */
+        <p
+          className="mt-2 rounded-lg px-3 py-2 text-[12px] font-medium leading-relaxed"
+          style={{ background: "rgba(94,200,255,0.10)", color: "#5ec8ff" }}
+        >
+          {scenario.referenceText}
+        </p>
+      )}
       <p className="mt-2 text-[13.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
         {scenario.situation}
       </p>
@@ -677,6 +687,9 @@ const EVENT_CATEGORY_LABEL: Record<EventCategory, string> = {
 
 function EventCard({ event, onAdvance }: { event: LuckEvent; onAdvance: () => void }) {
   const catLabel = EVENT_CATEGORY_LABEL[event.category];
+  // Echo-Event: markergebundenes Markt-Event, das auf eine frühere Entscheidung
+  // reagiert (S4). Erkennung rein über die Daten — kein eigener State.
+  const isEcho = Boolean(event.requiresMarker);
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
@@ -700,8 +713,27 @@ function EventCard({ event, onAdvance }: { event: LuckEvent; onAdvance: () => vo
       >
         {catLabel}
       </span>
-      <span className="section-label mt-1">Zufallsereignis</span>
+      {isEcho ? (
+        /* Echo-Badge: kennzeichnet das Event als direkte Folge einer Entscheidung */
+        <span
+          className="mx-auto mt-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+          style={{ background: "rgba(94,200,255,0.12)", color: "#5ec8ff" }}
+        >
+          Folge eurer Entscheidung
+        </span>
+      ) : (
+        <span className="section-label mt-1">Zufallsereignis</span>
+      )}
       <h2 className="mt-1 text-xl font-bold tracking-[-0.02em]">{event.title}</h2>
+      {event.referenceText && (
+        /* "Weil ihr..."-Zeile: erklärt den Bezug zur früheren Entscheidung */
+        <p
+          className="mx-auto mt-2 max-w-xs rounded-lg px-3 py-2 text-[12px] font-medium leading-relaxed"
+          style={{ background: "rgba(94,200,255,0.10)", color: "#5ec8ff" }}
+        >
+          {event.referenceText}
+        </p>
+      )}
       <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed" style={{ color: "var(--muted)" }}>
         {event.text}
       </p>
@@ -1147,6 +1179,15 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="px-3.5 pb-3.5">
+              {rec.scenario.referenceText && (
+                /* Kausalzeile (S4): zeigt im Rückblick, warum dieses Szenario kam */
+                <p
+                  className="mb-2 rounded-lg px-3 py-2 text-[11.5px] font-medium leading-relaxed"
+                  style={{ background: "rgba(94,200,255,0.10)", color: "#5ec8ff" }}
+                >
+                  {rec.scenario.referenceText}
+                </p>
+              )}
               {/* Gewählt */}
               <div className="glass-card-inner p-3">
                 <div className="flex items-center justify-between">

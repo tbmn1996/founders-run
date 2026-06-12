@@ -1,10 +1,10 @@
-# Acceptance Checklist - Founder's Run in Lovable
+# Acceptance Checklist - Founder's Run
 
 ## Kernflow
 
-1. Die App startet direkt mit dem Intro zu `Loop`.
+1. Die App startet direkt mit dem Intro zu `Mira`.
 2. Ein Durchlauf hat genau 5 Entscheidungen und 2 Glücks-Events.
-3. Glücks-Events erscheinen nach Phase 2 und nach Phase 4.
+3. Ein VCM-Event erscheint nach Phase 1, ein Markt-Event nach Phase 4.
 4. Nach jeder Entscheidung sieht man sofort Punkte, Konsequenz und Stat-Effekte.
 5. Am Ende erscheinen Score, Founder-Typ, finale Werte, Rückblick und Closing.
 
@@ -14,10 +14,10 @@
 2. Optionen werden pro Szenario zufällig gemischt.
 3. Jede Option verändert mehrere Werte und enthält echte Trade-offs.
 4. Negative Punkte sind möglich.
-5. Cash/Runway und Säulenwerte fallen nie unter 0.
+5. Cash und Säulenwerte fallen nie unter 0.
 6. Gesamtscore entspricht:
    `decisionPoints + (growth + innovation + community + impact) / 2 + runwayBonus`
-7. `runwayBonus` ist `cash / 5`, gerundet, oder `-30`, wenn Cash 0 ist.
+7. `runwayBonus` ist `cash / 2000`, gerundet, oder `-30`, wenn Cash 0 ist.
 8. Founder-Typ wird aus der stärksten Säule bestimmt.
 9. Bei sehr ausgeglichenen Werten, maximale Säule minus minimale Säule <= 8,
    erscheint `Der/die Allrounder:in`.
@@ -51,12 +51,12 @@
 1. Dark Mode ist Standard.
 2. Hintergrund `#141414`, warme Orange/Rot-Akzente.
 3. Karten wirken wie Aura-v2: dunkle Flächen, weiche Schatten, 16/20/24 px Radien.
-4. Typografie: Plus Jakarta Sans oder sehr ähnlicher Sans-Serif-Fallback.
+4. Typografie: klare System-Sans-Schrift ohne externe Font-Abhängigkeit.
 5. Motion ist weich und kurz, keine übertriebenen Animationen.
 
 ## Build-Qualität
 
 1. TypeScript ohne offensichtliche Typfehler.
 2. Keine toten Platzhalter-Screens.
-3. Keine Beispieltexte außerhalb des VCM/Loop-Kontexts.
+3. Keine Beispieltexte außerhalb des VCM/Mira-Kontexts.
 4. Keine Backend- oder Supabase-Abhängigkeit, solange nicht ausdrücklich verlangt.

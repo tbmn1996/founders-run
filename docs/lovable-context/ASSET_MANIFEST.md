@@ -1,4 +1,4 @@
-# Asset Manifest für Lovable
+# Asset Manifest
 
 ## Lokale Assets
 
@@ -11,14 +11,15 @@
 3. `assets/Logo SC/2.png`  
    Zusätzliches Logo/Branding-Asset. Nur verwenden, wenn es visuell klar passt.
 
-## Einsatz in der Lovable-App
+## Einsatz in der App
 
 1. Die Simulation muss auch ohne hochgeladene Logos sauber funktionieren.
 2. Wenn Logos verfügbar sind, auf dem Intro-Screen dezent als Branding und im
    Closing-Screen etwas prominenter nutzen.
 3. Keine großen Hero-Bilder verwenden. Das Produkt ist ein interaktives
    Mobile-Spiel, kein Marketing-Landingpage.
-4. Falls Logos wegen Upload-Namen anders heißen, in Lovable die Imports anpassen.
+4. In der Next.js-App liegen zugeschnittene, transparente Varianten unter
+   `startup-simulation/public/logos/`.
 
 ## Fallback
 

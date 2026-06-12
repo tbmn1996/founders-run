@@ -78,8 +78,8 @@ Diese Datei beschreibt das Design vollständig, sodass weiteres Material (Slides
 
 ## 2. Typografie
 
-- **Font:** **Plus Jakarta Sans** (Google Fonts, via `next/font`, `display: swap`)
-  - CSS-Variable heißt `--font-montserrat` (historisch — lädt aber Plus Jakarta Sans). Fallback: `system-ui, sans-serif`.
+- **Font:** System-Sans-Stack (`system-ui`, `-apple-system`, `BlinkMacSystemFont`, `"Segoe UI"`, `sans-serif`)
+  - Bewusst ohne Google-Font-Build-Abhängigkeit, damit Builds auch in eingeschränkten Netzen stabil laufen.
 - **Gewichte:** 300, 400, 500, 600, 700, 800
 - **Global:** `letter-spacing: -0.01em`, `-webkit-font-smoothing: antialiased`
 
@@ -196,7 +196,7 @@ Prinzip: schnell, weich, nie ruckartig; Listen erscheinen gestaffelt, Modals sli
 
 1. **Hintergrund:** `#141414`, dezenter warmer Orange-Radial-Glow, 3% Grain.
 2. **Flächen:** Karten `#1C1C1C`, Radius 24px, 1px `rgba(255,255,255,0.07)` Border, weicher Schatten.
-3. **Text:** Plus Jakarta Sans, Off-White `#EDEBE8`, Titel 700/`-0.03em`, Labels UPPERCASE/`0.08em`/`#888`.
+3. **Text:** System-Sans, Off-White `#EDEBE8`, Titel 700/`-0.03em`, Labels UPPERCASE/`0.08em`/`#888`.
 4. **Akzent:** Orange→Rot Gradient `#f76c07 → #fe281f` (135°), sparsam — meist nur als Border, Text-Highlight oder Glow.
 5. **Form:** großzügige Rundungen (16/20/24px), viel Luft, Pill-Shapes.
 6. **Motion:** ease-out-expo, sanftes Stagger-Fade-up.

@@ -9,3 +9,6 @@ out/
 # Logs & lokale Umgebung
 *.log
 .env*
+
+# Lokale Arbeitsartefakte (Content-Exporte, Screenshots etc.)
+outputs/

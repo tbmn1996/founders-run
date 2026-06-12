@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
+  ChevronLeft,
   RotateCcw,
   Sparkles,
   Trophy,
@@ -17,8 +18,6 @@ import {
 import StatBar from "@/components/StatBar";
 import {
   ALLOCATION,
-  FOUNDER_TYPES,
-  INITIAL_STATS,
   PHASES,
   SCENARIO_INTRO,
   STAT_META,
@@ -30,15 +29,14 @@ import {
   type Stats,
 } from "@/lib/gameData";
 import {
-  applyAllocation,
-  applyEffects,
   buildRun,
   computeAllocationPot,
   computeScore,
+  deriveRunState,
   determineFounderType,
   formatMoney,
   pickLuckEvent,
-  SCORED_KEYS,
+  type CompletedStep,
   type DecisionRecord,
 } from "@/lib/gameLogic";
 
@@ -80,6 +78,139 @@ function buildTimeline(): Step[] {
   ];
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = document.createElement("img");
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Canvas konnte nicht exportiert werden."));
+    }, "image/png");
+  });
+}
+
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+async function createShareGraphic({
+  score,
+  founderName,
+  founderTagline,
+  founderEmoji,
+}: {
+  score: number;
+  founderName: string;
+  founderTagline: string;
+  founderEmoji: string;
+}): Promise<File> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1920;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas wird nicht unterstützt.");
+
+  const gradient = ctx.createLinearGradient(0, 0, 1080, 1920);
+  gradient.addColorStop(0, "#141414");
+  gradient.addColorStop(0.55, "#1c1c1c");
+  gradient.addColorStop(1, "#2a1710");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  const glow = ctx.createRadialGradient(180, 180, 0, 180, 180, 560);
+  glow.addColorStop(0, "rgba(247,108,7,0.34)");
+  glow.addColorStop(1, "rgba(247,108,7,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 1080, 1080);
+
+  const vcmLogo = await loadImage("/logos/vcm-transparent.png");
+  ctx.drawImage(vcmLogo, 250, 156, 580, 237);
+
+  ctx.fillStyle = "#edebe8";
+  ctx.textAlign = "center";
+  ctx.font = "700 42px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("FOUNDER'S RUN", 540, 520);
+
+  roundedRect(ctx, 116, 650, 848, 850, 56);
+  ctx.fillStyle = "rgba(28,28,28,0.88)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "150px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText(founderEmoji, 540, 850);
+
+  ctx.fillStyle = "#f5f5f5";
+  ctx.font = "800 70px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText(founderName, 540, 990);
+
+  ctx.fillStyle = "#ff7a1a";
+  ctx.font = "700 34px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText(founderTagline, 540, 1050);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 168px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText(String(score), 540, 1244);
+
+  ctx.fillStyle = "#888888";
+  ctx.font = "600 42px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("PUNKTE", 540, 1312);
+
+  const accent = ctx.createLinearGradient(240, 1408, 840, 1408);
+  accent.addColorStop(0, "#f76c07");
+  accent.addColorStop(1, "#fe281f");
+  ctx.fillStyle = accent;
+  roundedRect(ctx, 240, 1396, 600, 8, 4);
+  ctx.fill();
+
+  ctx.fillStyle = "#edebe8";
+  ctx.font = "600 34px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("Gründe Mira in 3 Minuten.", 540, 1610);
+  ctx.fillStyle = "#888888";
+  ctx.font = "500 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("Startup Contacts · Venture Club Münster", 540, 1660);
+
+  const blob = await canvasToBlob(canvas);
+  return new File([blob], "founders-run-ergebnis.png", { type: "image/png" });
+}
+
+function downloadFile(file: File) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ---------------------------------------------------------------------------
 // Hilfkomponente: Effekt-Chips
 // ---------------------------------------------------------------------------
@@ -96,11 +227,11 @@ function EffectChips({ effects }: { effects: Partial<Stats> }) {
         const v = effects[k] ?? 0;
         if (v === 0) return null;
         const pos = v > 0;
-        // Cash-Werte in Geldformat, Säulen als Zahl
+        // Cash-Werte ohne doppeltes Geld-Label.
         const label =
           k === "cash"
-            ? `${pos ? "+" : "−"}${formatMoney(v)} ${STAT_META[k].label}`
-            : `${pos ? "+" : ""}${v} ${STAT_META[k].label}`;
+            ? `${STAT_META[k].label} ${pos ? "+" : "−"}${formatMoney(v)}`
+            : `${STAT_META[k].label} ${pos ? "+" : ""}${v}`;
         return (
           <span
             key={k}
@@ -123,36 +254,27 @@ function EffectChips({ effects }: { effects: Partial<Stats> }) {
 // ---------------------------------------------------------------------------
 
 export default function Game() {
-  const [screen, setScreen]   = useState<Screen>("intro");
+  const [screen, setScreen] = useState<Screen>("intro");
   const [timeline, setTimeline] = useState<Step[]>([]);
-  const [step, setStep]       = useState(0);
-  const [stats, setStats]     = useState<Stats>(INITIAL_STATS);
-  const [points, setPoints]   = useState(0);
-  const [records, setRecords] = useState<DecisionRecord[]>([]);
-  /** Gewählte Option — steuert Feedback-Panel in DecisionCard. */
-  const [chosen, setChosen]   = useState<Option | null>(null);
+  const [completed, setCompleted] = useState<CompletedStep[]>([]);
+  /** Temporäre Wahl — steuert Feedback-Panel, wird erst beim Weiterklicken committet. */
+  const [chosen, setChosen] = useState<Option | null>(null);
+
+  const { stats, points, records } = useMemo(
+    () => deriveRunState(completed),
+    [completed]
+  );
+  const step = completed.length;
+  const currentStep = timeline[step];
 
   function startGame() {
     setTimeline(buildTimeline());
-    setStep(0);
-    setStats(INITIAL_STATS);
-    setPoints(0);
-    setRecords([]);
+    setCompleted([]);
     setChosen(null);
     setScreen("sim");
   }
 
   function choose(scenario: Scenario, option: Option) {
-    setStats((s) => applyEffects(s, option.effects));
-    setPoints((p) => p + option.points);
-    setRecords((r) => [
-      ...r,
-      {
-        scenario,
-        chosen: option,
-        alternatives: scenario.options.filter((o) => o.id !== option.id),
-      },
-    ]);
     setChosen(option);
   }
 
@@ -161,17 +283,23 @@ export default function Game() {
    * zum nächsten Schritt oder zum Ergebnis-Screen.
    */
   function advance() {
+    if (!currentStep) return;
+
+    const nextCompleted =
+      currentStep.kind === "decision"
+        ? chosen
+          ? [...completed, { kind: "decision" as const, scenario: currentStep.scenario, chosen }]
+          : completed
+        : currentStep.kind === "event"
+          ? [...completed, { kind: "event" as const, event: currentStep.event }]
+          : completed;
+
+    if (nextCompleted.length === completed.length) return;
+
     setChosen(null);
-    const next = step + 1;
-    if (next >= timeline.length) {
+    setCompleted(nextCompleted);
+    if (nextCompleted.length >= timeline.length) {
       setScreen("result");
-    } else {
-      // Glücks-Event-Effekte beim Betreten anwenden
-      const upcoming = timeline[next];
-      if (upcoming.kind === "event") {
-        setStats((s) => applyEffects(s, upcoming.event.effects));
-      }
-      setStep(next);
     }
   }
 
@@ -180,25 +308,51 @@ export default function Game() {
    * wendet es auf Stats an und fügt Bonus-Punkte hinzu.
    */
   function finishAlloc(amounts: number[]) {
-    setStats((s) => applyAllocation(s, amounts));
-    setPoints((p) => p + ALLOCATION.bonusPoints);
-    advance();
+    const nextCompleted = [...completed, { kind: "alloc" as const, amounts }];
+    setCompleted(nextCompleted);
+    setChosen(null);
+    if (nextCompleted.length >= timeline.length) {
+      setScreen("result");
+    }
+  }
+
+  function goBack() {
+    if (screen === "result") {
+      setCompleted((prev) => prev.slice(0, -1));
+      setChosen(null);
+      setScreen("sim");
+      return;
+    }
+
+    if (chosen) {
+      setChosen(null);
+      return;
+    }
+
+    if (completed.length === 0) {
+      setTimeline([]);
+      setScreen("intro");
+      return;
+    }
+
+    setCompleted((prev) => prev.slice(0, -1));
   }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 py-6">
       <AnimatePresence mode="wait">
         {screen === "intro" && <Intro key="intro" onStart={startGame} />}
-        {screen === "sim" && (
+        {screen === "sim" && currentStep && (
           <Sim
             key={`sim-${step}-${chosen ? "fb" : "q"}`}
-            step={timeline[step]}
+            step={currentStep}
             stepIndex={step}
             total={timeline.length}
             stats={stats}
             chosen={chosen}
             onChoose={choose}
             onAdvance={advance}
+            onBack={goBack}
             onFinishAlloc={finishAlloc}
           />
         )}
@@ -209,6 +363,7 @@ export default function Game() {
             points={points}
             records={records}
             onRestart={startGame}
+            onBack={goBack}
           />
         )}
       </AnimatePresence>
@@ -231,14 +386,23 @@ function Intro({ onStart }: { onStart: () => void }) {
       className="flex flex-1 flex-col justify-center gap-6"
     >
       {/* Logo */}
-      <div className="flex justify-center">
+      <div className="flex items-center justify-center gap-4">
         <Image
-          src="/logos/startup-contacts.png"
+          src="/logos/startup-contacts-transparent.png"
           alt="Startup Contacts"
-          width={180}
-          height={60}
+          width={168}
+          height={73}
           unoptimized
-          className="object-contain"
+          className="h-auto w-[150px] object-contain"
+        />
+        <div className="h-8 w-px" style={{ background: "var(--border)" }} />
+        <Image
+          src="/logos/vcm-transparent.png"
+          alt="Venture Club Münster"
+          width={150}
+          height={61}
+          unoptimized
+          className="h-auto w-[118px] object-contain"
         />
       </div>
 
@@ -303,6 +467,7 @@ function Sim({
   chosen,
   onChoose,
   onAdvance,
+  onBack,
   onFinishAlloc,
 }: {
   step: Step;
@@ -312,6 +477,7 @@ function Sim({
   chosen: Option | null;
   onChoose: (s: Scenario, o: Option) => void;
   onAdvance: () => void;
+  onBack: () => void;
   onFinishAlloc: (amounts: number[]) => void;
 }) {
   const progress = ((stepIndex + 1) / total) * 100;
@@ -324,6 +490,14 @@ function Sim({
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-1 flex-col gap-4"
     >
+      <button
+        onClick={onBack}
+        className="btn btn-glass inline-flex w-fit items-center gap-1.5 px-3 py-2 text-[12px]"
+        aria-label="Zurück"
+      >
+        <ChevronLeft size={15} /> Zurück
+      </button>
+
       {/* Fortschritt über 8 Schritte */}
       <div className="flex flex-col gap-2">
         <div className="h-1 w-full overflow-hidden rounded-full" style={{ background: "var(--surface-3)" }}>
@@ -485,7 +659,7 @@ function EventCard({ event, onAdvance }: { event: LuckEvent; onAdvance: () => vo
       >
         {catLabel}
       </span>
-      <span className="section-label mt-1">Ereignis · Glück</span>
+      <span className="section-label mt-1">Zufallsereignis</span>
       <h2 className="mt-1 text-xl font-bold tracking-[-0.02em]">{event.title}</h2>
       <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed" style={{ color: "var(--muted)" }}>
         {event.text}
@@ -743,39 +917,64 @@ function Result({
   points,
   records,
   onRestart,
+  onBack,
 }: {
   stats: Stats;
   points: number;
   records: DecisionRecord[];
   onRestart: () => void;
+  onBack: () => void;
 }) {
   const score = computeScore(stats, points);
   const type  = determineFounderType(stats);
   const [showClosing, setShowClosing] = useState(false);
-  // Steuert das kurzfristige „Kopiert ✓"-Feedback beim Clipboard-Fallback
-  const [copied, setCopied] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "working" | "copied" | "downloaded">("idle");
 
-  /** Teilen-Funktion: Web Share API, Fallback Clipboard. */
+  /** Teilen-Funktion: Story-PNG per Web Share API, Fallback Download + Clipboard. */
   async function handleShare() {
     const url = typeof window !== "undefined" ? window.location.href : "";
-    const text = `Ich bin ${type.emoji} ${type.name} mit ${score} Punkten bei Founder's Run — der Startup-Simulation des Venture Club Münster! ${url}`;
+    const text = `Ich bin ${type.name} mit ${score} Punkten bei Founder's Run, der Startup-Simulation des Venture Club Münster. ${url}`;
+    setShareState("working");
     try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        // Web Share API — öffnet natives Teilen-Sheet auf dem Smartphone
-        await navigator.share({ title: "Founder's Run · Mein Ergebnis", text });
+      const file = await createShareGraphic({
+        score,
+        founderName: type.name,
+        founderTagline: type.tagline,
+        founderEmoji: type.emoji,
+      });
+      const shareData: ShareData = {
+        title: "Founder's Run · Mein Ergebnis",
+        text,
+        files: [file],
+      };
+
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.share &&
+        (!navigator.canShare || navigator.canShare(shareData))
+      ) {
+        await navigator.share(shareData);
+        setShareState("idle");
       } else {
-        // Desktop-Fallback: Text in die Zwischenablage kopieren
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        // Label nach 2 Sekunden zurücksetzen
-        setTimeout(() => setCopied(false), 2000);
+        downloadFile(file);
+        if (navigator.clipboard) await navigator.clipboard.writeText(text);
+        setShareState("downloaded");
+        setTimeout(() => setShareState("idle"), 2500);
       }
     } catch {
-      // Nutzer hat Teilen-Dialog abgebrochen — kein Fehler
+      try {
+        if (navigator.clipboard) await navigator.clipboard.writeText(text);
+        setShareState("copied");
+        setTimeout(() => setShareState("idle"), 2500);
+      } catch {
+        setShareState("idle");
+      }
     }
   }
 
-  if (showClosing) return <Closing onRestart={onRestart} />;
+  if (showClosing) {
+    return <Closing onRestart={onRestart} onBack={() => setShowClosing(false)} />;
+  }
 
   return (
     <motion.section
@@ -785,6 +984,14 @@ function Result({
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-1 flex-col gap-4 py-2"
     >
+      <button
+        onClick={onBack}
+        className="btn btn-glass inline-flex w-fit items-center gap-1.5 px-3 py-2 text-[12px]"
+        aria-label="Zurück"
+      >
+        <ChevronLeft size={15} /> Zurück
+      </button>
+
       {/* Founder-Typ */}
       <div className="glass-card p-6 text-center">
         <span className="section-label">Dein Ergebnis</span>
@@ -792,12 +999,12 @@ function Result({
         {/* VCM-Logo — dezent unter dem Founder-Emoji */}
         <div className="mx-auto mt-3 flex h-7 w-auto items-center justify-center">
           <Image
-            src="/logos/vcm.png"
+            src="/logos/vcm-transparent.png"
             alt="Venture Club Münster"
-            width={80}
-            height={28}
+            width={118}
+            height={48}
             unoptimized
-            className="object-contain opacity-80"
+            className="h-auto w-[118px] object-contain opacity-90"
           />
         </div>
         <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.03em]">{type.name}</h1>
@@ -815,10 +1022,18 @@ function Result({
         {/* Teilen-Button */}
         <button
           onClick={handleShare}
+          disabled={shareState === "working"}
           className="btn btn-glass mt-4 flex w-full items-center justify-center gap-2 py-2.5 text-[14px]"
+          style={{ opacity: shareState === "working" ? 0.7 : 1 }}
         >
           <Share2 size={16} />
-          {copied ? "Kopiert ✓" : "Ergebnis teilen"}
+          {shareState === "working"
+            ? "Grafik wird erstellt..."
+            : shareState === "downloaded"
+              ? "Grafik geladen"
+              : shareState === "copied"
+                ? "Text kopiert"
+                : "Ergebnis als Story teilen"}
         </button>
       </div>
 
@@ -899,6 +1114,9 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
                   </span>
                 </div>
                 <p className="mt-1 text-[12.5px]">{rec.chosen.outcome}</p>
+                <div className="mt-2">
+                  <EffectChips effects={rec.chosen.effects} />
+                </div>
               </div>
 
               {/* Alternativen */}
@@ -918,6 +1136,9 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
                       <p className="mt-0.5" style={{ color: "var(--muted)" }}>
                         {alt.outcome}
                       </p>
+                      <div className="mt-1.5">
+                        <EffectChips effects={alt.effects} />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -935,7 +1156,13 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
 // ---------------------------------------------------------------------------
 
 /** Abschlussfolie mit VCM-Logo und Einladung zum Venture Club Münster. */
-function Closing({ onRestart }: { onRestart: () => void }) {
+function Closing({
+  onRestart,
+  onBack,
+}: {
+  onRestart: () => void;
+  onBack: () => void;
+}) {
   return (
     <motion.section
       initial={{ opacity: 0, y: 14 }}
@@ -943,15 +1170,23 @@ function Closing({ onRestart }: { onRestart: () => void }) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-1 flex-col justify-center gap-6 text-center"
     >
+      <button
+        onClick={onBack}
+        className="btn btn-glass inline-flex w-fit items-center gap-1.5 px-3 py-2 text-[12px]"
+        aria-label="Zurück"
+      >
+        <ChevronLeft size={15} /> Zurück
+      </button>
+
       <div className="flex flex-col items-center gap-3">
         {/* VCM-Logo */}
         <Image
-          src="/logos/vcm.png"
+          src="/logos/vcm-transparent.png"
           alt="Venture Club Münster"
-          width={200}
-          height={70}
+          width={240}
+          height={98}
           unoptimized
-          className="object-contain"
+          className="h-auto w-[220px] object-contain"
         />
         <span className="section-label">Venture Club Münster</span>
         <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em]">

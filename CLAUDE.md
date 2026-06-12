@@ -26,10 +26,6 @@ npx vercel --prod  # Deploy via Vercel (aus startup-simulation/; einmalig vorher
 
 Es gibt keine konfigurierten Tests.
 
-## Hinweise zur Entwicklung
-
-**Vereins-Event „verein-merchant-lab":** In `gameData.ts` existiert ein auskommentiertes Vereins-Event. Es erst nach expliziter Freigabe durch Thomas mit echtem Inhalt aktivieren.
-
 ## Architektur
 
 Stack: **Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · framer-motion · lucide-react**. Die gesamte App ist eine einzige Client-Seite, kein Backend, keine Persistenz — die Sim speichert bewusst nichts (Scoreboard lebt in der Messe-App).
@@ -41,7 +37,7 @@ Strikte Trennung von Inhalt, Logik und Ablauf:
 - **`src/lib/gameData.ts`** — ALLE Spielinhalte: Szenario-Intro („Mira"), `SCENARIOS`-Pool, `LUCK_EVENTS`, `FOUNDER_TYPES`, `INITIAL_STATS`, `PHASES`, `STAT_META`, `ALLOCATION`. **Inhaltspflege passiert ausschließlich hier** — pro Phase ≥ 2 Szenarien im Pool, das Spiel zieht je Durchlauf zufällig eines; neue Szenarien hinzufügen erfordert keinen Code-Eingriff.
 - **`src/lib/gameLogic.ts`** — Spiellogik: `buildRun()` (Zufallsauswahl pro Phase), `pickLuckEvent(category)`, `applyEffects()`, Score-Berechnung, Verteil-Runden-Helfer (`computeAllocationPot`, `applyAllocation`, `formatMoney`), `determineFounderType()` (stärkste Säule → Typ, ausgeglichen → Allrounder).
 - **`src/app/page.tsx`** — kompletter Spielfluss als Screen-State-Machine (`intro → sim → result`) mit den Komponenten `Intro`, `Sim`, `DecisionCard`, `EventCard`, `Result` (inkl. `RecapItem`-Rückblick mit Alternativen und `Closing`-Abschlussfolie). Hier liegen auch die inaktiven Founders-Map-Hooks.
-- **`src/components/StatBar.tsx`** — Anzeige der 4 Säulen (Growth, Innovation, Community, Impact) + Runway.
+- **`src/components/StatBar.tsx`** — Anzeige der 4 Säulen (Growth, Innovation, Community, Impact) + Geld.
 - **`src/app/globals.css`** — Design-Tokens des „Aura v2"-Designs; Quelle/Referenz ist `docs/DESIGN_SYSTEM.md`.
 
 ### Spielmechanik-Invarianten (beim Ändern von Inhalten beachten)
@@ -49,15 +45,15 @@ Strikte Trennung von Inhalt, Logik und Ablauf:
 - Jede Option bewegt mehrere Stats **gegenläufig** (Trade-offs) — es darf keinen perfekten Durchlauf geben.
 - Punkte pro Entscheidung ca. −10 bis +20; schlechte Entscheidungen kosten.
 - 2 Glücks-Events pro Lauf mit bewusst **kleinen** Effekten — Glück würzt, dominiert aber nicht (faire Scoreboard-Vergleichbarkeit).
-- Gesamtscore = Entscheidungs-Punkte + Bonus aus den vier Säulen + Runway-Bonus (Strafe bei Runway 0).
+- Gesamtscore = Entscheidungs-Punkte + Bonus aus den vier Säulen + Geld-Bonus (Pleite-Strafe bei `cash <= 0`).
 
 **Timeline ist fix 8 Schritte:** Entscheidung P1 → Vereins-Event → P2 → P3 → Verteil-Runde → P4 → Markt-Event → P5. **Events pro Lauf:** genau 1 Vereins-Event (`category: "verein"`: Climate Hack, Startup Contacts, VCM-Beitritt) + 1 Markt-Event (`category: "markt"`).
 
-**Verteil-Runde (nach Phase 3):** Pot = `min(€18.000, floor(cash / 3000) × 3000)`. Schritt: €3.000. Je Schritt: +4 Punkte auf die Ziel-Säule (Buttons: Innovation, Growth, Community, Impact), pauschal +12 Punkte. Wenn Pot < €3.000: „Kasse fast leer"-Screen, kein Verteilen, keine Punkte. Werte nicht umbalancieren — Verteil-Runde ist ein separates Gameplay-Element.
+**Verteil-Runde (nach Phase 3):** Pot = `min(€18.000, floor(cash / 500) × 500)`. Slider-Schritt: €500. Je €3.000: +4 Punkte auf die Ziel-Säule (Innovation, Growth, Community, Impact), proportional gerundet; pauschal +12 Punkte nur, wenn Geld investiert wurde. Wenn Pot < €500: „Kasse fast leer"-Screen, kein Verteilen, keine Punkte. Werte nicht umbalancieren — Verteil-Runde ist ein separates Gameplay-Element.
 
 **Score-Formel:** `Punkte + round(Säulensumme / 2) + round(cash / 2000)`. Bei `cash ≤ 0`: stattdessen `−30` (Pleite-Strafe).
 
-**Fachbegriffe:** Begriffe wie „Bootstrappen", „Business Angel", „Pivot", „Runway", „Seed" immer mit einer Ein-Satz-Erklärung inline im Outcome-Text (nicht einfach nur genannt).
+**Fachbegriffe:** Begriffe wie „Bootstrappen", „Business Angel", „Pivot", „Seed" immer mit einer Ein-Satz-Erklärung inline im Outcome-Text (nicht einfach nur genannt).
 
 **Szenario-Anforderung:** Alle Szenarien müssen VC-taugliche, **skalierbare B2B-Startup-Cases** sein. Kein Friseursalon, keine lokalen One-Man-Shops (Anforderung von Eva).
 

@@ -25,8 +25,8 @@ Alternativen gebracht hätten.
 |---|---|
 | Start per QR / aus der App, **separat** gespielt | Standalone-Web-App, eigene URL hinter dem QR-Code |
 | Kein perfekter Durchlauf, **Trade-offs** | Jede Option bewegt mehrere Werte gegenläufig (z. B. +Growth, −Cash) |
-| Szenario zu Beginn vorstellen | Intro-Screen: Startup „Loop", Produkt, Bedingungen |
-| Startwerte in Kategorien | **Growth · Innovation · Community · Impact** (+ Runway/Cash als Überlebens-Ressource) |
+| Szenario zu Beginn vorstellen | Intro-Screen: Startup „Mira", Produkt, Bedingungen |
+| Startwerte in Kategorien | **Growth · Innovation · Community · Impact** (+ Geld/Cash als Überlebens-Ressource) |
 | Mehrere Runden, realistische Herausforderungen | 5 Phasen entlang der echten Gründungsreise |
 | Schlechte Entscheidungen = Minuspunkte | Punkte pro Option, dürfen negativ sein |
 | Punkte nach jeder Entscheidung | Sofort-Feedback mit Punkten + Werte-Änderungen |
@@ -88,8 +88,9 @@ Phase 3 · Die Finanzierung  → Entscheidung + Sofort-Feedback
                               • Werbung & Reichweite → Growth
                               • Team & Community → Community
                               • Verantwortung & Datenschutz → Impact
-                              (weiter erst wenn alles verteilt; +12 Punkte;
-                               „Kasse fast leer"-Screen wenn < €3.000)
+                              (weiter erst wenn alles verteilt; +12 Punkte,
+                               wenn Geld investiert wurde;
+                               „Kasse fast leer"-Screen wenn < €500)
    ↓
 Phase 4 · Das Wachstum      → Entscheidung + Sofort-Feedback
    ↓
@@ -124,7 +125,7 @@ je eines zufällig. Dadurch ist kaum ein Durchlauf gleich. **Events** sind in zw
 
 → Keine Option ist „richtig" ohne Preis. Genau das ist die Lektion.
 
-**Der Fragenpool umfasst aktuell 15 Szenarien** (3 pro Phase), jeweils mit 3
+**Der Fragenpool umfasst aktuell 20 Szenarien** (4 pro Phase), jeweils mit 3
 Optionen und einer erklärenden Konsequenz. Leicht erweiterbar.
 
 ---
@@ -134,10 +135,10 @@ Optionen und einer erklärenden Konsequenz. Leicht erweiterbar.
 - **Punkte pro Entscheidung:** ca. −10 bis +20. Schlechte Entscheidungen kosten.
 - **Events:** 
   - **Vereins-Events** (1 pro Lauf): Climate Hack (nachhaltiger 4-tägiger Hackathon mit Preisgeld), Startup Contacts (Kundenkontakte), VCM-Beitritt (Gründer-Netzwerk).
-  - **Markt-Events** (1 pro Lauf): z. B. „Reel geht viral" +Growth, „Konkurrent bekommt 2 Mio €" −Growth. Effekte bewusst **klein** — würzen, aber bestimmen nicht.
+  - **Markt-Events** (1 pro Lauf): z. B. KI-Hype gibt Rückenwind, KI-Kosten steigen, ein großer Tech-Konzern zieht nach. Effekte bewusst **klein** — würzen, aber bestimmen nicht.
 - **Gesamtscore** = `Punkte + round(Säulensumme / 2) + round(Geld / 2000)`. Bei `Geld ≤ 0`: stattdessen `−30` (Pleite-Strafe). → Gute Entscheidungen dominieren das
 Ergebnis, Glück verschiebt es nur leicht (gut fürs Scoreboard: fair vergleichbar).
-- **Fachbegriffe** wie „Bootstrappen", „Business Angel", „Pivot", „Runway", „Seed" immer mit einer Ein-Satz-Erklärung inline im Outcome-Text.
+- **Fachbegriffe** wie „Bootstrappen", „Business Angel", „Pivot", „Seed" immer mit einer Ein-Satz-Erklärung inline im Outcome-Text.
 
 ---
 
@@ -191,7 +192,6 @@ Details + Code-Hooks: siehe `startup-simulation/README.md`.
 
 ## 12. Was als Nächstes zu entscheiden ist
 
-1. **Merchant-Lab-Event:** Inhalt fehlt (öffentlich nicht dokumentiert) — wartet auf Beschreibung von Thomas/Eva. Platzhalter in `gameData.ts` auskommentiert; erst nach Freigabe mit echtem Inhalt aktivieren.
-2. **Punkte-Tuning am Stand testen:** Spannen & Score-Formel fühlen sich richtig an?
-3. **Founders-Map-Integrationsformat:** Redirect vs. postMessage — wartet auf App-Team. Hooks in `Result`-Komponente inaktiv.
-4. **Eva-Review:** B2B-Texte prüfen (Pivot von Kleinbetrieben auf Service-/Vertriebsteams) + Abschlussfolie.
+1. **Punkte-Tuning am Stand testen:** Spannen & Score-Formel fühlen sich richtig an?
+2. **Founders-Map-Integrationsformat:** Redirect vs. postMessage — wartet auf App-Team. Hooks in `Result`-Komponente inaktiv.
+3. **Eva-Review:** B2B-Texte prüfen (Pivot von Kleinbetrieben auf Service-/Vertriebsteams) + Abschlussfolie.

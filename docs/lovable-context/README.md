@@ -1,35 +1,15 @@
-# Lovable-Kontextpaket - Founder's Run
+# Lovable-Kontext (archiviert)
 
-Dieses Paket ist für die Umsetzung der VCM Startup-Simulation in Lovable gedacht.
-Es ist bewusst als Handoff-Paket formuliert, nicht als Änderung an der lokalen
-Next.js-App.
+Dieser Ordner enthält nur noch historischen Kontext aus der frühen Lovable-Exploration.
+Die aktive Source of Truth ist die Next.js-App in `startup-simulation/`, deployt über
+Vercel.
 
-## Dateien
+Aktueller Stand:
 
-1. `LOVABLE_PROMPT.md`  
-   Der vollständige Erstprompt für Lovable. Er ist so geschrieben, dass Lovable
-   daraus eine komplette mobile Web-App bauen kann.
+1. Startup-Szenario: `Mira`, KI-Assistentin für Service- und Vertriebsteams.
+2. Hosting-Ziel: Vercel, keine Lovable-spezifische Laufzeit.
+3. Keine Auth, keine Datenbank, keine Supabase- oder Backend-Abhängigkeit.
+4. Founders-Map-Rückgabe bleibt nur als vorbereiteter, deaktivierter Hook.
 
-2. `ASSET_MANIFEST.md`  
-   Hinweise zu Logos und Bildmaterial, falls Assets in Lovable hochgeladen
-   werden sollen.
-
-3. `ACCEPTANCE_CHECKLIST.md`  
-   Prüfliste für die finale Abnahme in Lovable.
-
-## Empfohlener Ablauf in Lovable
-
-1. Neues Lovable-Projekt erstellen.
-2. Den kompletten Inhalt aus `LOVABLE_PROMPT.md` als ersten Prompt einfügen.
-3. Falls Lovable Uploads unterstützt: die Logos aus `assets/Logo SC/` hochladen.
-4. Nach dem ersten Build anhand von `ACCEPTANCE_CHECKLIST.md` testen.
-5. Nur gezielt nachsteuern, zum Beispiel: "Der Rückblick zeigt die Alternativen
-   noch nicht vollständig" oder "Bitte die Stat-Trade-offs stärker sichtbar
-   machen".
-
-## Wichtige Produktentscheidung
-
-Die Simulation soll in Lovable weiterhin als eigenständige App umgesetzt werden:
-keine Authentifizierung, keine Datenbank, kein Scoreboard, keine harte Kopplung
-an die Founders-Map-App. Die spätere Rückgabe an die Founders Map bleibt nur als
-vorbereiteter, inaktiver Hook im Ergebnis-Screen vorgesehen.
+Für Review und Umsetzung zählt die `ACCEPTANCE_CHECKLIST.md` in diesem Ordner
+sowie das Hauptkonzept unter `docs/KONZEPT - Startup Simulation.md`.

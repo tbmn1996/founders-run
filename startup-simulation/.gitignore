@@ -1,0 +1,4 @@
+.vercel
+
+# TypeScript-Build-Cache (wird bei jedem tsc-Lauf neu geschrieben)
+tsconfig.tsbuildinfo

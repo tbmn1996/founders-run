@@ -67,7 +67,7 @@ export function applyEffects(stats: Stats, effects: Partial<Stats>): Stats {
 /**
  * Gesamtscore = Summe der Entscheidungs-Punkte
  *   + Bonus aus den vier Säulen / 2 (damit Entscheidungen dominieren)
- *   + Runway-Bonus auf Basis von cash / 2000 (Quelle: HTML-Prototyp score()).
+ *   + Geld-Bonus auf Basis von cash / 2000.
  *   + Harte Strafe −30, wenn cash ≤ 0.
  */
 export function computeScore(stats: Stats, decisionPoints: number): number {
@@ -135,6 +135,52 @@ export interface DecisionRecord {
   chosen: Option;
   /** Alternativen, die NICHT gewählt wurden (für den Rückblick). */
   alternatives: Option[];
+}
+
+export type CompletedStep =
+  | { kind: "decision"; scenario: Scenario; chosen: Option }
+  | { kind: "event"; event: LuckEvent }
+  | { kind: "alloc"; amounts: number[] };
+
+export interface DerivedRunState {
+  stats: Stats;
+  points: number;
+  records: DecisionRecord[];
+}
+
+/**
+ * Leitet den gesamten Spielstand aus der abgeschlossenen History ab.
+ * Dadurch kann die UI sicher zurückspringen, ohne Stats/Punkte manuell
+ * rückwärts rechnen zu müssen.
+ */
+export function deriveRunState(completed: CompletedStep[]): DerivedRunState {
+  let stats: Stats = { ...INITIAL_STATS };
+  let points = 0;
+  const records: DecisionRecord[] = [];
+
+  completed.forEach((step) => {
+    if (step.kind === "decision") {
+      stats = applyEffects(stats, step.chosen.effects);
+      points += step.chosen.points;
+      records.push({
+        scenario: step.scenario,
+        chosen: step.chosen,
+        alternatives: step.scenario.options.filter((o) => o.id !== step.chosen.id),
+      });
+      return;
+    }
+
+    if (step.kind === "event") {
+      stats = applyEffects(stats, step.event.effects);
+      return;
+    }
+
+    const spent = step.amounts.reduce((sum, amount) => sum + amount, 0);
+    stats = applyAllocation(stats, step.amounts);
+    if (spent > 0) points += ALLOCATION.bonusPoints;
+  });
+
+  return { stats, points, records };
 }
 
 export { INITIAL_STATS, PHASES };

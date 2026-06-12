@@ -120,8 +120,8 @@ export const SCENARIO_INTRO = {
   pitch:
     "Ihr gründet «Mira» — eine KI-Assistentin, die Service- und Vertriebsteams " +
     "in Unternehmen entlastet: Mails beantworten, Angebote erstellen, Kundenkommunikation " +
-    "automatisieren. Seat-basiertes B2B-SaaS, das mit jedem neuen Nutzer im Unternehmen " +
-    "skaliert. Du gründest das Startup dahinter.",
+    "automatisieren. B2B-SaaS heißt: Software-Abo für Unternehmen; abgerechnet wird " +
+    "pro Nutzerplatz und skaliert mit jedem neuen Team. Du gründest das Startup dahinter.",
   conditions: [
     "Team: du + 1 unentschlossene:r Mitgründer:in",
     "Startkapital: €20.000 (Erspartes & Family-and-Friends)",
@@ -144,15 +144,14 @@ export const INITIAL_STATS: Stats = {
 // ---------------------------------------------------------------------------
 export const PHASES = [
   { n: 1, name: "Die Idee",              intro: "Aus einer Idee wird ein Plan. Erste Weichen stellen." },
-  { n: 2, name: "Das Produkt",           intro: "Vom Konzept zum ersten echten Produkt (MVP)." },
+  { n: 2, name: "Das Produkt",           intro: "Vom Konzept zum ersten testbaren Produkt (MVP, Minimalversion zum Lernen)." },
   { n: 3, name: "Die Finanzierung",      intro: "Geld bewegt — aber zu welchem Preis?" },
   { n: 4, name: "Das Wachstum",          intro: "Aus einem Pilot wird ein Unternehmen." },
   { n: 5, name: "Die Bewährungsprobe",   intro: "Jedes Startup wird einmal richtig getestet." },
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Szenario-Pool. Pro Phase genau 3 Szenarien → eines wird zufällig gezogen.
-// Punkte/Effekte exakt aus dem HTML-Prototyp übernommen, kein Rebalancing.
+// Szenario-Pool. Pro Phase genau 4 Szenarien → eines wird zufällig gezogen.
 // ---------------------------------------------------------------------------
 export const SCENARIOS: Scenario[] = [
   // ===== Phase 1 — Die Idee =====
@@ -201,11 +200,11 @@ export const SCENARIOS: Scenario[] = [
     options: [
       {
         id: "a",
-        label: "Mittelstand (5–500 Mitarbeiter) — planbare Deals, früh zahlend",
+        label: "KMU im Mittelstand — kleine und mittlere Unternehmen mit zahlbaren Problemen",
         effects: { growth: 12, cash: 6000, community: -4 },
         points: 18,
         outcome:
-          "Geschäftskunden im Mittelstand bringen früh Umsatz und Stabilität. Sich auf wenige zahlende Kunden zu konzentrieren ist oft der schnellere Weg, vom eigenen Geld zu leben.",
+          "KMU sind kleine und mittlere Unternehmen: groß genug für echte Budgets, klein genug für schnelle Entscheidungen. Das bringt früh Umsatz und Stabilität.",
       },
       {
         id: "b",
@@ -260,6 +259,40 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
+  {
+    id: "p1-problem",
+    phase: 1,
+    title: "Welches Problem ist groß genug?",
+    situation:
+      "Mira kann vieles automatisieren. Welches Anfangsproblem ist groß genug für ein Venture-Capital-taugliches Startup und trotzdem eng genug für den Start?",
+    options: [
+      {
+        id: "a",
+        label: "Angebote und Follow-ups für B2B-Vertriebsteams automatisieren",
+        effects: { growth: 12, innovation: 6, cash: 2000, impact: -2 },
+        points: 18,
+        outcome:
+          "Starker Fokus: Vertriebsteams spüren sofort, ob mehr Angebote schneller rausgehen. Ein klar messbarer Nutzen verkauft sich besser als ein diffuses Alles-können-Tool.",
+      },
+      {
+        id: "b",
+        label: "Eine KI für jede Abteilung bauen",
+        effects: { innovation: 10, growth: -8, cash: -6000 },
+        points: 2,
+        outcome:
+          "Ambitioniert, aber zu breit. Wenn du zu viele Probleme gleichzeitig löst, wird das Produkt teuer und die Botschaft unscharf.",
+      },
+      {
+        id: "c",
+        label: "Nur interne Uni-Teams als Testkunden nehmen",
+        effects: { community: 12, impact: 4, cash: -3000, growth: -6 },
+        points: 6,
+        outcome:
+          "Guter Lernraum, aber zu weit weg vom zahlenden Markt. Für ein skalierbares B2B-Startup brauchst du schnell echte Unternehmensprobleme.",
+      },
+    ],
+  },
+
   // ===== Phase 2 — Das Produkt =====
 
   {
@@ -271,11 +304,11 @@ export const SCENARIOS: Scenario[] = [
     options: [
       {
         id: "a",
-        label: "Schnelle erste Version, die nur das Wichtigste kann",
+        label: "MVP bauen: Minimalversion, die nur das Wichtigste kann",
         effects: { growth: 12, innovation: 4, community: 4 },
         points: 20,
         outcome:
-          "Genau richtig: lieber früh echtes Feedback von Nutzern als monatelang im Stillen bauen. Fertig ist besser als perfekt.",
+          "Ein MVP ist ein Minimum Viable Product: eine einfache Version, mit der du lernst, ob der Kernnutzen stimmt. Frühes Feedback schlägt monatelanges Bauen im Stillen.",
       },
       {
         id: "b",
@@ -339,11 +372,11 @@ export const SCENARIOS: Scenario[] = [
     options: [
       {
         id: "a",
-        label: "Eine fertige KI eines großen Anbieters mieten",
+        label: "Große KI per API anbinden",
         effects: { growth: 10, innovation: 2, cash: -6000 },
         points: 12,
         outcome:
-          "Schnell startklar — aber du bist abhängig und zahlst pro Nutzung laufend mit. Praktisch, kostet aber Kontrolle.",
+          "Eine API ist eine Schnittstelle zu einem fremden Dienst. Du bist schnell startklar, zahlst aber pro Nutzung und bleibst abhängig vom Anbieter.",
       },
       {
         id: "b",
@@ -360,6 +393,40 @@ export const SCENARIOS: Scenario[] = [
         points: 16,
         outcome:
           "Pragmatischer Mittelweg: ein offenes, kostenloses Modell nehmen und anpassen — günstiger als selbst bauen, freier als mieten.",
+      },
+    ],
+  },
+
+  {
+    id: "p2-api-integration",
+    phase: 2,
+    title: "Wie tief integriert sich Mira?",
+    situation:
+      "Pilotkunden wollen Mira direkt in CRM, Helpdesk und Mail-Tools nutzen. Jede Integration macht das Produkt wertvoller, aber auch komplexer.",
+    options: [
+      {
+        id: "a",
+        label: "Erst zwei Kern-APIs sauber anbinden",
+        effects: { innovation: 10, growth: 8, cash: -5000, impact: 3 },
+        points: 18,
+        outcome:
+          "APIs sind Schnittstellen zwischen Software-Systemen. Zwei verlässliche Integrationen sind besser als zehn wackelige, weil echte Teams damit sofort arbeiten können.",
+      },
+      {
+        id: "b",
+        label: "Alles manuell importieren lassen und schneller verkaufen",
+        effects: { growth: 10, innovation: -6, cash: 1000, impact: -4 },
+        points: 6,
+        outcome:
+          "Schnell im Vertrieb, schwach im Produkt: Manuelle Datenimporte brechen im Alltag leicht und erzeugen Datenschutzrisiken.",
+      },
+      {
+        id: "c",
+        label: "Erst eine offene Plattform für alle Integrationen bauen",
+        effects: { innovation: 14, growth: -8, cash: -10000 },
+        points: 4,
+        outcome:
+          "Technisch stark, aber zu früh. Eine Plattform lohnt sich erst, wenn du genau weißt, welche Integrationen Kunden wirklich täglich brauchen.",
       },
     ],
   },
@@ -430,7 +497,7 @@ export const SCENARIOS: Scenario[] = [
         effects: { growth: 10, community: 8, cash: -6000 },
         points: 14,
         outcome:
-          "Lockt viele an, ist aber teuer: Nur wenige zahlen am Ende wirklich. Funktioniert nur, wenn genug von der Gratis- zur Bezahl-Version wechseln.",
+          "Freemium heißt: eine kostenlose Basisversion lockt Nutzer an, bezahlt wird später für Pro-Funktionen. Das kann wachsen, kostet aber viel, wenn zu wenige wechseln.",
       },
     ],
   },
@@ -469,6 +536,40 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
+  {
+    id: "p3-termsheet",
+    phase: 3,
+    title: "Das harte Term Sheet",
+    situation:
+      "Ein Fonds bietet 3 Mio. Euro. Im Term Sheet, also dem Vertragsangebot für eine Finanzierung, stehen harte Bedingungen: zweifache Liquidation Preference, Board-Mehrheit und ein sofortiger Pivot (strategische Richtungsänderung) zu Enterprise-only, also nur noch große Firmenkunden.",
+    options: [
+      {
+        id: "a",
+        label: "Annehmen — Tempo ist wichtiger als Kontrolle",
+        effects: { cash: 60000, growth: 18, community: -16, impact: -10 },
+        points: -4,
+        outcome:
+          "Eine Liquidation Preference regelt, wer bei einem Verkauf zuerst Geld bekommt; zweifach ist hart. Viel Kapital hilft wenig, wenn du Kontrolle und Teamvertrauen verlierst.",
+      },
+      {
+        id: "b",
+        label: "Verhandeln: einfache Preference, kein Board-Mehrheitsrecht",
+        effects: { cash: 36000, growth: 10, community: 4, impact: 2 },
+        points: 20,
+        outcome:
+          "Gute Finanzierung ist nicht nur Betrag, sondern Bedingungen. Du nimmst Kapital, schützt aber Entscheidungsfreiheit und vermeidest toxische Kontrollrechte.",
+      },
+      {
+        id: "c",
+        label: "Brückendarlehen nehmen und später verhandeln",
+        effects: { cash: 18000, growth: 4, innovation: -2, community: 2 },
+        points: 10,
+        outcome:
+          "Ein Brückendarlehen ist ein kurzfristiger Kredit bis zur nächsten Finanzierung. Es kauft Zeit, löst aber die Frage nach starken Investoren noch nicht.",
+      },
+    ],
+  },
+
   // ===== Phase 4 — Das Wachstum =====
 
   {
@@ -500,7 +601,7 @@ export const SCENARIOS: Scenario[] = [
         effects: { community: 16, growth: 4, cash: -10000 },
         points: 12,
         outcome:
-          "Im B2B-SaaS zählt Retention: Eine starke Customer-Success-Funktion senkt Churn und treibt Expansion-Revenue.",
+          "Im B2B-SaaS, also Software für Unternehmen, zählt Bindung: Zufriedene Kunden kündigen seltener und kaufen leichter zusätzliche Plätze.",
       },
     ],
   },
@@ -518,7 +619,7 @@ export const SCENARIOS: Scenario[] = [
         effects: { growth: 16, cash: -20000, community: -6, impact: 2 },
         points: 6,
         outcome:
-          "Zu früh skaliert = Geld verbrannt, bevor das Modell wirklich sitzt. Premature Scaling killt viele Startups.",
+          "Zu früh skaliert heißt: Du gibst Geld aus, bevor Vertrieb und Produkt wirklich sitzen. Das sieht nach Wachstum aus, kann aber die Kasse leeren.",
       },
       {
         id: "b",
@@ -556,11 +657,11 @@ export const SCENARIOS: Scenario[] = [
       },
       {
         id: "b",
-        label: "Thought-Leadership-Content und Community-Events",
+        label: "Expert:innen-Content und Community-Events",
         effects: { community: 16, growth: 8, cash: -4000 },
         points: 18,
         outcome:
-          "Vertrauen durch Expertise: Im B2B-SaaS bauen glaubwürdige Inhalte mehr Vertrauen als jede Ad-Kampagne.",
+          "Vertrauen durch Expertise: Wenn Mira sichtbar erklärt, wie gute KI-Prozesse funktionieren, wirkt das bei B2B-Kunden glaubwürdiger als reine Werbung.",
       },
       {
         id: "c",
@@ -569,6 +670,40 @@ export const SCENARIOS: Scenario[] = [
         points: 8,
         outcome:
           "Kann durch die Decke gehen — oder verpuffen. PR-Stunts sind ein Glücksspiel: hohe Varianz, schwer wiederholbar.",
+      },
+    ],
+  },
+
+  {
+    id: "p4-partner-marketplace",
+    phase: 4,
+    title: "Wachstum über Partner?",
+    situation:
+      "Ein großer CRM-Marktplatz, also eine Plattform für Kundendaten-Software, bietet euch Sichtbarkeit, wenn Mira als Zusatzmodul gelistet wird. Dafür müsst ihr Produktplan und Umsatz teilen.",
+    options: [
+      {
+        id: "a",
+        label: "Marketplace-Deal annehmen und Reichweite kaufen",
+        effects: { growth: 16, cash: 6000, innovation: -6, community: -4 },
+        points: 12,
+        outcome:
+          "Reichweite über Partner kann Sales beschleunigen. Der Preis ist Abhängigkeit: Wenn der Marktplatz Regeln ändert, hängt dein Wachstum an fremder Infrastruktur.",
+      },
+      {
+        id: "b",
+        label: "Eigene Direktvertriebsmaschine bauen",
+        effects: { growth: 8, community: 6, cash: -14000, innovation: 2 },
+        points: 14,
+        outcome:
+          "Langsamer und teurer, aber kontrollierter. Ein eigener Vertrieb lernt direkt vom Kunden und macht dich unabhängiger von Plattformen.",
+      },
+      {
+        id: "c",
+        label: "Exklusive Agenturpartner zertifizieren",
+        effects: { community: 12, growth: 10, cash: -6000, impact: -3 },
+        points: 10,
+        outcome:
+          "Partner bringen Nähe zum Kunden, aber Qualität wird schwerer zu steuern. Schlechte Implementierungen fallen am Ende auf Mira zurück.",
       },
     ],
   },
@@ -675,6 +810,40 @@ export const SCENARIOS: Scenario[] = [
         points: 8,
         outcome:
           "Entlastet — kostet aber Geld und löst das eigentliche Problem nicht. Werkzeuge helfen, ersetzen aber keine echte Erholung.",
+      },
+    ],
+  },
+
+  {
+    id: "p5-incumbent-copy",
+    phase: 5,
+    title: "Der große Anbieter kopiert euch",
+    situation:
+      "Ein Konzern wie Microsoft oder HubSpot kündigt ähnliche KI-Funktionen an. Viele fragen sich, ob Mira jetzt noch eine Chance hat.",
+    options: [
+      {
+        id: "a",
+        label: "Direkt gegen den Konzern positionieren",
+        effects: { growth: -6, community: 4, cash: -12000, innovation: 4 },
+        points: 4,
+        outcome:
+          "Mutig, aber teuer: Ein Marketingkampf gegen Konzerne verbrennt schnell Geld. Kleine Startups gewinnen selten über Lautstärke.",
+      },
+      {
+        id: "b",
+        label: "Tiefer in eine Branche gehen und Spezialfeatures bauen",
+        effects: { innovation: 12, growth: 8, impact: 4, cash: -7000 },
+        points: 20,
+        outcome:
+          "Guter Gegenangriff: Konzerne bauen breite Standardfunktionen, Startups können tiefer in die Arbeitsabläufe einer Branche gehen.",
+      },
+      {
+        id: "c",
+        label: "Partner im Konzern-Ökosystem werden",
+        effects: { growth: 10, cash: 3000, community: 4, innovation: -4 },
+        points: 12,
+        outcome:
+          "Pragmatisch: Du nutzt die Reichweite des großen Anbieters, gibst aber ein Stück Differenzierung auf und wirst vergleichbarer.",
       },
     ],
   },

@@ -10,13 +10,13 @@ Abschlussfolie für den Verein.
 
 ## Starten
 
-> Voraussetzung: **Node.js ≥ 20** (auf dem aktuellen Rechner ist Node nicht
-> installiert — bitte vorher z. B. über https://nodejs.org installieren).
+> Voraussetzung: **Node.js ≥ 20**.
 
 ```bash
 cd startup-simulation
 npm install
 npm run dev      # → http://localhost:3000
+npm run lint     # TypeScript-Check
 ```
 
 Produktion:
@@ -31,10 +31,10 @@ npm run build && npm run start
 src/
 ├─ app/
 │  ├─ globals.css   # Aura-v2-Design-Tokens (1:1 aus DESIGN_SYSTEM.md)
-│  ├─ layout.tsx    # Font (Plus Jakarta Sans), Dark-Mode, Meta
+│  ├─ layout.tsx    # Dark-Mode, Meta
 │  └─ page.tsx      # Spiel-Ablauf: Intro · Runden · Ergebnis · Rückblick · Closing
 ├─ components/
-│  └─ StatBar.tsx   # Werte-Anzeige (Growth/Innovation/Community/Impact/Runway)
+│  └─ StatBar.tsx   # Werte-Anzeige (Growth/Innovation/Community/Impact/Geld)
 └─ lib/
    ├─ gameData.ts   # ALLE Inhalte: Szenario, Fragen, Events, Founder-Typen
    └─ gameLogic.ts  # Zufallsauswahl, Scoring, Founder-Typ-Berechnung
@@ -65,6 +65,6 @@ damit die App nicht belastet wird. Vorgesehene Anbindung:
 
 ## Design
 
-Voll im Aura-v2-System: Dark-Mode, Plus Jakarta Sans, warme Orange→Rot-Akzente
+Voll im Aura-v2-System: Dark-Mode, klare System-Sans-Typografie, warme Orange→Rot-Akzente
 (`#f76c07 → #fe281f`), `#141414`-Hintergrund mit dezentem Glow, weiche Schatten,
 runde Karten (16/20/24 px), ease-out-expo-Bewegungen. Tokens in `globals.css`.

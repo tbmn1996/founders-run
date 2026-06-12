@@ -1,22 +1,22 @@
-frage_id	phase	titel	situation
-p1-cofounder	1	Wer baut mit?	Deine Idee steht — aber gründet man allein? Eine starke KI-Entwicklerin will einsteigen, verlangt aber 40 % der Firmenanteile.
-p1-target	1	Wer ist zuerst dran?	Du kannst nicht alle gleichzeitig bedienen. Auf welche Unternehmensgruppe konzentrierst du dich zuerst?
-p1-brand	1	Wie tretet ihr auf?	Der erste Eindruck zählt. Wie löst du Name, Logo und Auftritt von «Mira»?
-p1-problem	1	Welches Problem ist groß genug?	Mira kann vieles automatisieren. Welches Anfangsproblem ist groß genug für ein Venture-Capital-taugliches Startup und trotzdem eng genug für den Start?
-p2-mvp	2	Wie viel Produkt zum Start?	Der Start naht. Wie fertig muss die erste Version von Mira wirklich sein?
-p2-feedback	2	Was wollen die Nutzer?	Die ersten Unternehmen testen Mira. Wie findest du heraus, was sie wirklich brauchen?
-p2-tech	2	Woher kommt die KI?	Mira braucht ein KI-Modell als Motor. Worauf baust du?
-p2-api-integration	2	Wie tief integriert sich Mira?	Pilotkunden wollen Mira direkt in CRM, Helpdesk und Mail-Tools nutzen. Jede Integration macht das Produkt wertvoller, aber auch komplexer.
-p3-source	3	Woher kommt das Geld?	Für den nächsten Schritt brauchst du frisches Geld. Wie finanzierst du das Wachstum?
-p3-pricing	3	Was kostet Mira?	Das Preismodell entscheidet über Wachstum und Marge. Wie positionierst du dich im B2B-Markt?
-p3-investor	3	Der große Scheck	Ein Investor bietet sehr viel Geld — will aber die Mehrheit der Firma und dass ihr heimlich die Daten eurer Nutzer verkauft.
-p3-termsheet	3	Das harte Term Sheet	Ein Fonds bietet 3 Mio. Euro. Im Term Sheet, also dem Vertragsangebot für eine Finanzierung, stehen harte Bedingungen: zweifache Liquidation Preference, Board-Mehrheit und ein sofortiger Pivot (strategische Richtungsänderung) zu Enterprise-only, also nur noch große Firmenkunden.
-p4-hire	4	Der erste richtige Mitarbeiter	Du kannst dir genau eine feste Stelle leisten. Wer hilft jetzt am meisten?
-p4-expand	4	Wie schnell wachsen?	Münster läuft. Sollst du jetzt expandieren — oder erst den Heimmarkt dominieren?
-p4-marketing	4	Wie macht ihr Mira bekannt?	Das Budget ist begrenzt. Wie holst du die meiste Aufmerksamkeit raus?
-p4-partner-marketplace	4	Wachstum über Partner?	Ein großer CRM-Marktplatz, also eine Plattform für Kundendaten-Software, bietet euch Sichtbarkeit, wenn Mira als Zusatzmodul gelistet wird. Dafür müsst ihr Produktplan und Umsatz teilen.
-p5-keycustomer	5	Der Großkunde stellt ein Ultimatum	Euer größter Enterprise-Kunde will Exklusivität — ihr dürftet keine anderen Kunden in seiner Branche mehr beliefern.
-p5-crisis	5	Mira blamiert sich öffentlich	Mira gibt einem Kunden einen völlig falschen Rat — er verschickt dadurch eine peinliche Massen-Mail an alle seine Accounts. Der Fall geht in den sozialen Medien viral.
-p5-burnout	5	Das Team ist am Limit	Nach Monaten im Vollgas-Modus ist das Team ausgelaugt. Erste denken ans Aufhören.
-p5-incumbent-copy	5	Der große Anbieter kopiert euch	Ein Konzern wie Microsoft oder HubSpot kündigt ähnliche KI-Funktionen an. Viele fragen sich, ob Mira jetzt noch eine Chance hat.
-crisis-runway	krise	Runway-Krise	Eure Kasse ist unter die Sicherheitslinie gefallen. Runway heißt: Wie lange ihr mit dem vorhandenen Geld noch überlebt. Jetzt braucht Mira einen realistischen Ausweg, ohne dass das Startup sofort endet.
+frage_id	phase	titel	situation	braucht_marker	bezug
+p1-cofounder	1	Wer baut mit?	Deine Idee steht — aber gründet man allein? Eine starke KI-Entwicklerin will einsteigen, verlangt aber 40 % der Firmenanteile.		
+p1-target	1	Wer ist zuerst dran?	Du kannst nicht alle gleichzeitig bedienen. Auf welche Unternehmensgruppe konzentrierst du dich zuerst?		
+p1-brand	1	Wie tretet ihr auf?	Der erste Eindruck zählt. Wie löst du Name, Logo und Auftritt von «Mira»?		
+p1-problem	1	Welches Problem ist groß genug?	Mira kann vieles automatisieren. Welches Anfangsproblem ist groß genug für ein Venture-Capital-taugliches Startup und trotzdem eng genug für den Start?		
+p2-mvp	2	Wie viel Produkt zum Start?	Der Start naht. Wie fertig muss die erste Version von Mira wirklich sein?		
+p2-feedback	2	Was wollen die Nutzer?	Die ersten Unternehmen testen Mira. Wie findest du heraus, was sie wirklich brauchen?		
+p2-tech	2	Woher kommt die KI?	Mira braucht ein KI-Modell als Motor. Worauf baust du?		
+p2-api-integration	2	Wie tief integriert sich Mira?	Pilotkunden wollen Mira direkt in CRM, Helpdesk und Mail-Tools nutzen. Jede Integration macht das Produkt wertvoller, aber auch komplexer.		
+p3-source	3	Woher kommt das Geld?	Für den nächsten Schritt brauchst du frisches Geld. Wie finanzierst du das Wachstum?		
+p3-pricing	3	Was kostet Mira?	Das Preismodell entscheidet über Wachstum und Marge. Wie positionierst du dich im B2B-Markt?		
+p3-investor	3	Der große Scheck	Ein Investor bietet sehr viel Geld — will aber die Mehrheit der Firma und dass ihr heimlich die Daten eurer Nutzer verkauft.		
+p3-termsheet	3	Das harte Term Sheet	Ein Fonds bietet 3 Mio. Euro. Im Term Sheet, also dem Vertragsangebot für eine Finanzierung, stehen harte Bedingungen: zweifache Liquidation Preference, Board-Mehrheit und ein sofortiger Pivot (strategische Richtungsänderung) zu Enterprise-only, also nur noch große Firmenkunden.		
+p4-hire	4	Der erste richtige Mitarbeiter	Du kannst dir genau eine feste Stelle leisten. Wer hilft jetzt am meisten?		
+p4-expand	4	Wie schnell wachsen?	Münster läuft. Sollst du jetzt expandieren — oder erst den Heimmarkt dominieren?		
+p4-marketing	4	Wie macht ihr Mira bekannt?	Das Budget ist begrenzt. Wie holst du die meiste Aufmerksamkeit raus?		
+p4-partner-marketplace	4	Wachstum über Partner?	Ein großer CRM-Marktplatz, also eine Plattform für Kundendaten-Software, bietet euch Sichtbarkeit, wenn Mira als Zusatzmodul gelistet wird. Dafür müsst ihr Produktplan und Umsatz teilen.		
+p5-keycustomer	5	Der Großkunde stellt ein Ultimatum	Euer größter Enterprise-Kunde will Exklusivität — ihr dürftet keine anderen Kunden in seiner Branche mehr beliefern.		
+p5-crisis	5	Mira blamiert sich öffentlich	Mira gibt einem Kunden einen völlig falschen Rat — er verschickt dadurch eine peinliche Massen-Mail an alle seine Accounts. Der Fall geht in den sozialen Medien viral.		
+p5-burnout	5	Das Team ist am Limit	Nach Monaten im Vollgas-Modus ist das Team ausgelaugt. Erste denken ans Aufhören.		
+p5-incumbent-copy	5	Der große Anbieter kopiert euch	Ein Konzern wie Microsoft oder HubSpot kündigt ähnliche KI-Funktionen an. Viele fragen sich, ob Mira jetzt noch eine Chance hat.		
+crisis-runway	krise	Runway-Krise	Eure Kasse ist unter die Sicherheitslinie gefallen. Runway heißt: Wie lange ihr mit dem vorhandenen Geld noch überlebt. Jetzt braucht Mira einen realistischen Ausweg, ohne dass das Startup sofort endet.		

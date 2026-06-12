@@ -31,6 +31,16 @@ export interface Stats {
   cash: number;
 }
 
+/**
+ * Marker-Vokabular für vorbereitete Konsequenz-Bezüge.
+ * Quelle: content/marker.tsv.
+ */
+export interface MarkerDef {
+  id: string;
+  label: string;
+  description: string;
+}
+
 export interface Option {
   id: string;
   label: string;
@@ -40,6 +50,8 @@ export interface Option {
   points: number;
   /** Kurze Lern-/Konsequenz-Erklärung — der "Aha"-Moment. */
   outcome: string;
+  /** Optionaler Marker aus content/marker.tsv, den diese Antwort setzt. */
+  setsMarker?: string;
 }
 
 export interface Scenario {
@@ -49,6 +61,10 @@ export interface Scenario {
   title: string;
   situation: string;
   options: Option[];
+  /** Optionaler Marker aus content/marker.tsv, den dieses Szenario voraussetzt. */
+  requiresMarker?: string;
+  /** Optionaler Bezugstext aus der TSV-Spalte "bezug". */
+  referenceText?: string;
 }
 
 export interface LuckEvent {
@@ -58,6 +74,10 @@ export interface LuckEvent {
   effects: Partial<Stats>;
   /** Herkunft des Events: Vereins-Event oder Markt-Event. */
   category: EventCategory;
+  /** Optionaler Marker aus content/marker.tsv, den dieses Event voraussetzt. */
+  requiresMarker?: string;
+  /** Optionaler Bezugstext aus der TSV-Spalte "bezug". */
+  referenceText?: string;
 }
 
 export interface FounderType {
@@ -140,6 +160,7 @@ export {
   FOUNDER_TYPES,
   SCENARIO_INTRO,
   PHASES,
+  MARKERS,
 } from "./gameContent.generated";
 
 /** Startwerte. Cash in Euro. Quelle: INIT im HTML-Prototyp. */

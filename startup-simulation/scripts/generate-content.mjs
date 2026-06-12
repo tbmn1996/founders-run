@@ -126,6 +126,16 @@ function validateHeaders(parsed, required) {
   }
 }
 
+/** Validiert Header-Spalten inkl. Reihenfolge. */
+function validateExactHeaders(parsed, expected) {
+  const { headers, filename } = parsed;
+  validateHeaders(parsed, expected);
+  const sameOrder = headers.length === expected.length && headers.every((h, i) => h === expected[i]);
+  if (!sameOrder) {
+    fail(filename, 1, `Header muss exakt lauten: ${expected.join("\t")}`);
+  }
+}
+
 /**
  * Validiert eine Zahl-Zelle: leer OK, oder Ganzzahl mit optionalem Minus.
  * Gibt den geparsten Wert zurück (Number oder undefined).
@@ -174,9 +184,54 @@ function colIdx(headers, name) {
 // Dateien laden und validieren
 // ---------------------------------------------------------------------------
 
+// --- marker.tsv ---
+const markerParsed = parseTsv("marker.tsv");
+validateExactHeaders(markerParsed, ["marker_id", "label", "beschreibung"]);
+
+// Einfache stabile IDs, optional mit genau einem Namensraum wie "tech:api".
+const MARKER_ID_RE = /^[a-z]+(?:_[a-z]+)*(?::[a-z]+(?:_[a-z]+)*)?$/;
+
+const markerById = new Map(); // marker_id → { label, beschreibung }
+markerParsed.rows.forEach((row, rowIdx) => {
+  const lineNum = rowIdx + 2;
+  const mh = markerParsed.headers;
+  const mId          = row[colIdx(mh, "marker_id")];
+  const label        = row[colIdx(mh, "label")];
+  const beschreibung = row[colIdx(mh, "beschreibung")];
+
+  requireNonEmpty("marker.tsv", lineNum, "marker_id", mId);
+  requireNonEmpty("marker.tsv", lineNum, "label", label);
+  requireNonEmpty("marker.tsv", lineNum, "beschreibung", beschreibung);
+
+  if (!MARKER_ID_RE.test(mId)) {
+    fail(
+      "marker.tsv",
+      lineNum,
+      `marker_id '${mId}' ungültig — erlaubt sind einfache stabile IDs wie tech:api oder cash:discipline`
+    );
+  }
+  if (markerById.has(mId)) {
+    fail("marker.tsv", lineNum, `Doppelte marker_id: '${mId}'`);
+  }
+  markerById.set(mId, { label, beschreibung });
+});
+
+if (markerById.size === 0) {
+  fail("marker.tsv", 0, "Mindestens 1 Marker erwartet");
+}
+
+/** Prüft eine Marker-Referenz-Zelle: leer OK (→ undefined), sonst muss der Marker existieren. */
+function checkMarkerRef(filename, lineNum, colName, value) {
+  if (value === "" || value === undefined) return undefined;
+  if (!markerById.has(value)) {
+    fail(filename, lineNum, `Spalte '${colName}': Marker '${value}' existiert nicht in marker.tsv`);
+  }
+  return value;
+}
+
 // --- fragen.tsv ---
 const fragenParsed = parseTsv("fragen.tsv");
-validateHeaders(fragenParsed, ["frage_id", "phase", "titel", "situation"]);
+validateHeaders(fragenParsed, ["frage_id", "phase", "titel", "situation", "braucht_marker", "bezug"]);
 
 const fragenById = new Map(); // frage_id → { phase, titel, situation }
 const frageIds = [];
@@ -187,6 +242,7 @@ fragenParsed.rows.forEach((row, rowIdx) => {
   const phaseStr = row[colIdx(fragenParsed.headers, "phase")];
   const titel = row[colIdx(fragenParsed.headers, "titel")];
   const situation = row[colIdx(fragenParsed.headers, "situation")];
+  const bezug = row[colIdx(fragenParsed.headers, "bezug")];
 
   // Eindeutigkeit frage_id
   if (fragenById.has(fId)) {
@@ -208,7 +264,8 @@ fragenParsed.rows.forEach((row, rowIdx) => {
     }
   }
 
-  fragenById.set(fId, { phase, titel, situation });
+  const brauchtMarker = checkMarkerRef("fragen.tsv", lineNum, "braucht_marker", row[colIdx(fragenParsed.headers, "braucht_marker")]);
+  fragenById.set(fId, { phase, titel, situation, brauchtMarker, bezug });
   frageIds.push(fId);
 });
 
@@ -231,7 +288,7 @@ if (krisenFragen.length < 1) {
 const antwortenParsed = parseTsv("antworten.tsv");
 validateHeaders(antwortenParsed, [
   "frage_id", "antwort_id", "antwort", "punkte",
-  "growth", "innovation", "community", "impact", "geld", "ergebnis",
+  "growth", "innovation", "community", "impact", "geld", "ergebnis", "setzt_marker",
 ]);
 
 // Map: frage_id → Array von Antwort-Objekten (Reihenfolge: alphabetisch nach antwort_id)
@@ -277,8 +334,11 @@ antwortenParsed.rows.forEach((row, rowIdx) => {
   if (impact     !== undefined) effects.impact     = impact;
   if (geld       !== undefined) effects.cash       = geld;
 
+  // setzt_marker: leer = neutrale Antwort, sonst muss der Marker existieren
+  const setztMarker = checkMarkerRef("antworten.tsv", lineNum, "setzt_marker", row[colIdx(ah, "setzt_marker")]);
+
   if (!antwortenByFrage.has(fId)) antwortenByFrage.set(fId, []);
-  antwortenByFrage.get(fId).push({ id: aId, label, effects, points: punkte, outcome: ergebnis });
+  antwortenByFrage.get(fId).push({ id: aId, label, effects, points: punkte, outcome: ergebnis, setsMarker: setztMarker });
 });
 
 // Jede frage_id in fragen.tsv muss Antworten haben und umgekehrt; pro Frage EXAKT 3 Antworten
@@ -318,6 +378,7 @@ const eventsParsed = parseTsv("events.tsv");
 validateHeaders(eventsParsed, [
   "event_id", "kategorie", "titel", "text",
   "growth", "innovation", "community", "impact", "geld",
+  "braucht_marker", "bezug",
 ]);
 
 const GUELTIGE_KATEGORIEN = new Set(["verein", "markt"]);
@@ -346,6 +407,10 @@ eventsParsed.rows.forEach((row, rowIdx) => {
   if (!GUELTIGE_KATEGORIEN.has(kategorie)) {
     fail("events.tsv", lineNum, `Spalte 'kategorie': '${kategorie}' nicht erlaubt — erlaubt: verein, markt`);
   }
+
+  const bezug = row[colIdx(eh, "bezug")];
+  const brauchtMarker = checkMarkerRef("events.tsv", lineNum, "braucht_marker", row[colIdx(eh, "braucht_marker")]);
+
   if (kategorie === "verein") hatVerein = true;
   if (kategorie === "markt") hatMarkt = true;
 
@@ -362,7 +427,15 @@ eventsParsed.rows.forEach((row, rowIdx) => {
   if (impact     !== undefined) effects.impact     = impact;
   if (geld       !== undefined) effects.cash       = geld;
 
-  eventsData.push({ id: eId, category: kategorie, title: titel, text, effects });
+  eventsData.push({
+    id: eId,
+    category: kategorie,
+    title: titel,
+    text,
+    effects,
+    requiresMarker: brauchtMarker,
+    referenceText: bezug,
+  });
 });
 
 if (!hatVerein) fail("events.tsv", 0, "Mindestens 1 Event mit kategorie 'verein' erwartet");
@@ -483,11 +556,19 @@ for (let p = 1; p <= 5; p++) {
 // ---------------------------------------------------------------------------
 
 const scenarios = frageIds.map((fId) => {
-  const { phase, titel, situation } = fragenById.get(fId);
+  const { phase, titel, situation, brauchtMarker, bezug } = fragenById.get(fId);
   const options = (antwortenByFrage.get(fId) || [])
     .slice()
     .sort((a, b) => a.id.localeCompare(b.id));
-  return { id: fId, phase, title: titel, situation, options };
+  return {
+    id: fId,
+    phase,
+    title: titel,
+    situation,
+    options,
+    requiresMarker: brauchtMarker,
+    referenceText: bezug,
+  };
 });
 
 // ---------------------------------------------------------------------------
@@ -515,8 +596,10 @@ function renderOption(opt) {
     `          effects: ${renderEffects(opt.effects)},`,
     `          points: ${opt.points},`,
     `          outcome: ${esc(opt.outcome)},`,
-    `        }`,
   ];
+  // Optionales Feld nur ausgeben, wenn gesetzt — hält die generierte Datei schlank
+  if (opt.setsMarker) lines.push(`          setsMarker: ${esc(opt.setsMarker)},`);
+  lines.push(`        }`);
   return lines.join("\n");
 }
 
@@ -524,30 +607,41 @@ function renderOption(opt) {
 function renderScenario(s) {
   const optStr = s.options.map(renderOption).join(",\n");
   const phaseExpr = typeof s.phase === "string" ? esc(s.phase) : s.phase;
-  return [
+  const lines = [
     `  {`,
     `    id: ${esc(s.id)},`,
     `    phase: ${phaseExpr},`,
     `    title: ${esc(s.title)},`,
     `    situation: ${esc(s.situation)},`,
-    `    options: [`,
-    optStr,
-    `    ],`,
-    `  }`,
-  ].join("\n");
+  ];
+  if (s.requiresMarker) {
+    lines.push(`    requiresMarker: ${esc(s.requiresMarker)},`);
+  }
+  if (s.referenceText) {
+    lines.push(`    referenceText: ${esc(s.referenceText)},`);
+  }
+  lines.push(`    options: [`, optStr, `    ],`, `  }`);
+  return lines.join("\n");
 }
 
 /** LuckEvent als mehrzeiliges TS-Literal. */
 function renderEvent(ev) {
-  return [
+  const lines = [
     `  {`,
     `    id: ${esc(ev.id)},`,
     `    title: ${esc(ev.title)},`,
     `    text: ${esc(ev.text)},`,
     `    effects: ${renderEffects(ev.effects)},`,
     `    category: ${esc(ev.category)},`,
-    `  }`,
-  ].join("\n");
+  ];
+  if (ev.requiresMarker) {
+    lines.push(`    requiresMarker: ${esc(ev.requiresMarker)},`);
+  }
+  if (ev.referenceText) {
+    lines.push(`    referenceText: ${esc(ev.referenceText)},`);
+  }
+  lines.push(`  }`);
+  return lines.join("\n");
 }
 
 /** FounderType-Eintrag als TS-Literal. */
@@ -582,8 +676,18 @@ import type {
   Scenario,
   LuckEvent,
   FounderType,
+  MarkerDef,
   StatKey,
 } from "./gameData";
+
+// ---------------------------------------------------------------------------
+// Marker
+// ---------------------------------------------------------------------------
+export const MARKERS: MarkerDef[] = [
+${[...markerById.entries()]
+  .map(([id, m]) => `  { id: ${esc(id)}, label: ${esc(m.label)}, description: ${esc(m.beschreibung)} }`)
+  .join(",\n")}
+];
 
 // ---------------------------------------------------------------------------
 // Szenarien
@@ -625,5 +729,5 @@ export const PHASES = ${renderPhases(phasesData)};
 `;
 
 writeFileSync(OUT_FILE, tsOutput, "utf8");
-console.log(`✓ Geschrieben: src/lib/gameContent.generated.ts (${scenarios.length} Szenarien, ${eventsData.length} Events)`);
+console.log(`✓ Geschrieben: src/lib/gameContent.generated.ts (${scenarios.length} Szenarien, ${eventsData.length} Events, ${markerById.size} Marker)`);
 console.log("✅ Generierung abgeschlossen.");

@@ -1,7 +1,7 @@
-event_id	kategorie	titel	text	growth	innovation	community	impact	geld
-verein-climate-hack	verein	Climate Hack gewonnen!	Du hast beim Climate Hack mitgemacht — einem nachhaltigen 4-tägigen Hackathon, bei dem der Venture Club Münster junge Menschen unterstützt, ihre ersten Gründungsideen in die Tat umzusetzen. Deine Idee überzeugt die Jury: Preisgeld!			6	6	10000
-verein-startup-contacts	verein	Neue Kunden auf der Startup Contacts	Auf der Startup Contacts, der Gründermesse des Venture Club Münster, kommst du mit Besuchern ins Gespräch — daraus werden echte erste Kunden.	8		8		
-verein-beitritt	verein	Beim Venture Club Münster dabei	Du bist dem Venture Club Münster beigetreten und triffst dort erfahrene Gründer:innen, die dir mit Rat und Kontakten den Rücken stärken.		4	10		
-markt-konzern	markt	Großer Tech-Konzern zieht nach	Ein bekannter Tech-Konzern stellt eine ähnliche KI vor. Plötzlich ist die Konkurrenz riesig.	-8				-3000
-markt-kosten	markt	Die KI-Kosten steigen	Die Preise für die Rechenleistung deiner KI klettern nach oben. Der Betrieb wird teurer.		-2			-8000
-markt-hype	markt	KI ist in aller Munde	KI ist gerade DAS Thema in den Medien. Alle wollen wissen, was Mira kann — Rückenwind!	8		6		
+event_id	kategorie	titel	text	growth	innovation	community	impact	geld	braucht_marker	bezug
+verein-climate-hack	verein	Climate Hack gewonnen!	Du hast beim Climate Hack mitgemacht — einem nachhaltigen 4-tägigen Hackathon, bei dem der Venture Club Münster junge Menschen unterstützt, ihre ersten Gründungsideen in die Tat umzusetzen. Deine Idee überzeugt die Jury: Preisgeld!			6	6	10000		
+verein-startup-contacts	verein	Neue Kunden auf der Startup Contacts	Auf der Startup Contacts, der Gründermesse des Venture Club Münster, kommst du mit Besuchern ins Gespräch — daraus werden echte erste Kunden.	8		8				
+verein-beitritt	verein	Beim Venture Club Münster dabei	Du bist dem Venture Club Münster beigetreten und triffst dort erfahrene Gründer:innen, die dir mit Rat und Kontakten den Rücken stärken.		4	10				
+markt-konzern	markt	Großer Tech-Konzern zieht nach	Ein bekannter Tech-Konzern stellt eine ähnliche KI vor. Plötzlich ist die Konkurrenz riesig.	-8				-3000		
+markt-kosten	markt	Die KI-Kosten steigen	Die Preise für die Rechenleistung deiner KI klettern nach oben. Der Betrieb wird teurer.		-2			-8000		
+markt-hype	markt	KI ist in aller Munde	KI ist gerade DAS Thema in den Medien. Alle wollen wissen, was Mira kann — Rückenwind!	8		6				

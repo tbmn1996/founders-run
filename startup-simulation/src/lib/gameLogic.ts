@@ -24,37 +24,94 @@ import {
 
 export const SCORED_KEYS: StatKey[] = ["growth", "innovation", "community", "impact"];
 
+/** Deterministischer PRNG: gleicher Seed -> gleicher Zahlenstrom. */
+export function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), t | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Stabiler 32-bit-Hash für slot-gekeyte Zufallsziehungen. */
+export function hashSlot(runSeed: number, key: string): number {
+  let hash = 0x811C9DC5;
+  const input = `${runSeed}:${key}`;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
 /** Fisher-Yates-Shuffle (kopiert, mutiert das Original nicht). */
-function shuffle<T>(arr: T[]): T[] {
+function shuffle<T>(arr: T[], rng: () => number): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-/**
- * Stellt einen frischen Durchlauf zusammen: pro Phase genau EIN zufälliges
- * Szenario. Optionen-Reihenfolge wird ebenfalls gemischt, damit Position
- * nichts verrät.
- */
-export function buildRun(): Scenario[] {
-  return PHASES.map((phase) => {
-    const pool = SCENARIOS.filter((s) => s.phase === phase.n);
-    const picked = pool[Math.floor(Math.random() * pool.length)];
-    return { ...picked, options: shuffle(picked.options) };
-  });
-}
+export type Slot =
+  | { id: "p1" | "p2" | "p3" | "p4" | "p5"; kind: "decision"; phase: number }
+  | { id: "verein" | "markt"; kind: "event"; category: EventCategory }
+  | { id: "alloc"; kind: "alloc" };
+
+export type Step =
+  | { kind: "decision"; scenario: Scenario }
+  | { kind: "event"; event: LuckEvent }
+  | { kind: "alloc" };
 
 /**
- * Liefert ein zufälliges Glücks-Event aus dem angegebenen Kategorie-Pool.
- * Ersetzt das alte pickLuckEvents(n) — die Kategorie (verein/markt) steuert,
- * aus welchem Teilpool gezogen wird.
+ * Leitet die Slot-Reihenfolge aus der abgeschlossenen History ab.
+ * S2 bleibt konstant bei 8 Slots; S3/S4 erweitern diese reine Ableitung.
  */
-export function pickLuckEvent(category: EventCategory): LuckEvent {
-  const pool = LUCK_EVENTS.filter((e) => e.category === category);
-  return pool[Math.floor(Math.random() * pool.length)];
+export function deriveSlots(completed: CompletedStep[]): Slot[] {
+  void completed;
+  return [
+    { id: "p1", kind: "decision", phase: 1 },
+    { id: "verein", kind: "event", category: "verein" },
+    { id: "p2", kind: "decision", phase: 2 },
+    { id: "p3", kind: "decision", phase: 3 },
+    { id: "alloc", kind: "alloc" },
+    { id: "p4", kind: "decision", phase: 4 },
+    { id: "markt", kind: "event", category: "markt" },
+    { id: "p5", kind: "decision", phase: 5 },
+  ];
+}
+
+function pickBySeed<T>(pool: T[], runSeed: number, key: string): T {
+  if (pool.length === 0) {
+    throw new Error(`Kein Inhalt für Slot-Key "${key}" gefunden.`);
+  }
+  const rng = mulberry32(hashSlot(runSeed, key));
+  return pool[Math.floor(rng() * pool.length)];
+}
+
+export function resolveStep(runSeed: number, slot: Slot): Step {
+  if (slot.kind === "alloc") {
+    return { kind: "alloc" };
+  }
+
+  if (slot.kind === "event") {
+    const pool = LUCK_EVENTS.filter((e) => e.category === slot.category);
+    return {
+      kind: "event",
+      event: pickBySeed(pool, runSeed, `${slot.id}:event`),
+    };
+  }
+
+  const pool = SCENARIOS.filter((s) => s.phase === slot.phase);
+  const scenario = pickBySeed(pool, runSeed, `${slot.id}:pick`);
+  const optionsRng = mulberry32(hashSlot(runSeed, `${slot.id}:options:${scenario.id}`));
+  return {
+    kind: "decision",
+    scenario: { ...scenario, options: shuffle(scenario.options, optionsRng) },
+  };
 }
 
 /** Wendet Effekt-Deltas auf die Werte an. Cash und Säulen dürfen nicht unter 0. */

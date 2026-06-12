@@ -30,16 +30,17 @@ import {
   type Stats,
 } from "@/lib/gameData";
 import {
-  buildRun,
   computeAllocationPot,
   computeScore,
+  deriveSlots,
   deriveRunState,
   determineFounderType,
   formatMoney,
   isOptionLocked,
-  pickLuckEvent,
+  resolveStep,
   type CompletedStep,
   type DecisionRecord,
+  type Step,
 } from "@/lib/gameLogic";
 
 // ---------------------------------------------------------------------------
@@ -47,38 +48,6 @@ import {
 // ---------------------------------------------------------------------------
 
 type Screen = "intro" | "sim" | "result";
-
-/** Ein Schritt in der Spielzeitachse. */
-type Step =
-  | { kind: "decision"; scenario: Scenario }
-  | { kind: "event"; event: LuckEvent }
-  | { kind: "alloc" };
-
-// ---------------------------------------------------------------------------
-// Zeitachse
-// ---------------------------------------------------------------------------
-
-/**
- * Baut die feste 8-Schritte-Reihenfolge:
- *   [decision(P1), event(verein), decision(P2), decision(P3),
- *    alloc, decision(P4), event(markt), decision(P5)]
- * Events werden mit pickLuckEvent nach Kategorie gezogen.
- */
-function buildTimeline(): Step[] {
-  const run = buildRun(); // 5 Szenarien, je eins pro Phase
-  const evVerein = pickLuckEvent("verein" as EventCategory);
-  const evMarkt = pickLuckEvent("markt" as EventCategory);
-  return [
-    { kind: "decision", scenario: run[0] },
-    { kind: "event",    event: evVerein },
-    { kind: "decision", scenario: run[1] },
-    { kind: "decision", scenario: run[2] },
-    { kind: "alloc" },
-    { kind: "decision", scenario: run[3] },
-    { kind: "event",    event: evMarkt },
-    { kind: "decision", scenario: run[4] },
-  ];
-}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -213,6 +182,13 @@ function downloadFile(file: File) {
   URL.revokeObjectURL(url);
 }
 
+function createRunSeed(): number {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    return crypto.getRandomValues(new Uint32Array(1))[0];
+  }
+  return Math.floor(Math.random() * 0x100000000);
+}
+
 // ---------------------------------------------------------------------------
 // Hilfkomponente: Effekt-Chips
 // ---------------------------------------------------------------------------
@@ -257,7 +233,7 @@ function EffectChips({ effects }: { effects: Partial<Stats> }) {
 
 export default function Game() {
   const [screen, setScreen] = useState<Screen>("intro");
-  const [timeline, setTimeline] = useState<Step[]>([]);
+  const [runSeed, setRunSeed] = useState<number | null>(null);
   const [completed, setCompleted] = useState<CompletedStep[]>([]);
   /** Temporäre Wahl — steuert Feedback-Panel, wird erst beim Weiterklicken committet. */
   const [chosen, setChosen] = useState<Option | null>(null);
@@ -267,10 +243,15 @@ export default function Game() {
     [completed]
   );
   const step = completed.length;
-  const currentStep = timeline[step];
+  const slots = useMemo(() => deriveSlots(completed), [completed]);
+  const currentSlot = step < slots.length ? slots[step] : undefined;
+  const currentStep = useMemo(
+    () => (runSeed === null || !currentSlot ? null : resolveStep(runSeed, currentSlot)),
+    [currentSlot, runSeed]
+  );
 
   function startGame() {
-    setTimeline(buildTimeline());
+    setRunSeed(createRunSeed());
     setCompleted([]);
     setChosen(null);
     setScreen("sim");
@@ -300,7 +281,7 @@ export default function Game() {
 
     setChosen(null);
     setCompleted(nextCompleted);
-    if (nextCompleted.length >= timeline.length) {
+    if (nextCompleted.length >= deriveSlots(nextCompleted).length) {
       setScreen("result");
     }
   }
@@ -313,7 +294,7 @@ export default function Game() {
     const nextCompleted = [...completed, { kind: "alloc" as const, amounts }];
     setCompleted(nextCompleted);
     setChosen(null);
-    if (nextCompleted.length >= timeline.length) {
+    if (nextCompleted.length >= deriveSlots(nextCompleted).length) {
       setScreen("result");
     }
   }
@@ -332,7 +313,7 @@ export default function Game() {
     }
 
     if (completed.length === 0) {
-      setTimeline([]);
+      setRunSeed(null);
       setScreen("intro");
       return;
     }
@@ -346,10 +327,10 @@ export default function Game() {
         {screen === "intro" && <Intro key="intro" onStart={startGame} />}
         {screen === "sim" && currentStep && (
           <Sim
-            key={`sim-${step}-${chosen ? "fb" : "q"}`}
+            key={`sim-${currentSlot?.id ?? step}-${chosen ? "fb" : "q"}`}
             step={currentStep}
             stepIndex={step}
-            total={timeline.length}
+            total={slots.length}
             stats={stats}
             cashRaw={cashRaw}
             chosen={chosen}

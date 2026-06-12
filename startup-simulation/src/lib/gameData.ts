@@ -44,8 +44,8 @@ export interface Option {
 
 export interface Scenario {
   id: string;
-  /** 1-basierte Phasen-Nummer (Bezug zu PHASES). */
-  phase: number;
+  /** 1-basierte Phasen-Nummer (Bezug zu PHASES) oder Sondersituation. */
+  phase: number | "krise";
   title: string;
   situation: string;
   options: Option[];
@@ -78,6 +78,13 @@ export const CASH_BANDS: Record<
   strained: { label: "Angespannt", min: 5000 },
   critical: { label: "Kritisch",   min: 0 },
 };
+
+export const CRISIS = {
+  /** Unterhalb dieser ungeclampeten Cash-Grenze wird max. einmal pro Lauf die Krise eingefügt. */
+  triggerCash: 3000,
+  slotId: "crisis:runway",
+  maxPerRun: 1,
+} as const;
 
 // ---------------------------------------------------------------------------
 // Stat-Metadaten: Label, Emoji, Maximalwert je Säule/Cash.

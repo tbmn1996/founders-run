@@ -269,9 +269,9 @@ export default function Game() {
     if (!currentStep) return;
 
     const nextCompleted =
-      currentStep.kind === "decision"
+      currentStep.kind === "decision" || currentStep.kind === "crisis"
         ? chosen
-          ? [...completed, { kind: "decision" as const, scenario: currentStep.scenario, chosen }]
+          ? [...completed, { kind: currentStep.kind, scenario: currentStep.scenario, chosen }]
           : completed
         : currentStep.kind === "event"
           ? [...completed, { kind: "event" as const, event: currentStep.event }]
@@ -457,7 +457,7 @@ function Sim({
 }: {
   step: Step;
   stepIndex: number;
-  total: number;      // = 8 Schritte
+  total: number;      // = 8 Schritte, bei Krise 9
   stats: Stats;
   cashRaw: number;
   chosen: Option | null;
@@ -509,6 +509,7 @@ function Sim({
       ) : (
         <DecisionCard
           scenario={step.scenario}
+          variant={step.kind === "crisis" ? "crisis" : "decision"}
           cashRaw={cashRaw}
           chosen={chosen}
           onChoose={onChoose}
@@ -525,18 +526,23 @@ function Sim({
 
 function DecisionCard({
   scenario,
+  variant = "decision",
   cashRaw,
   chosen,
   onChoose,
   onAdvance,
 }: {
   scenario: Scenario;
+  variant?: "decision" | "crisis";
   cashRaw: number;
   chosen: Option | null;
   onChoose: (s: Scenario, o: Option) => void;
   onAdvance: () => void;
 }) {
-  const phase = PHASES.find((p) => p.n === scenario.phase);
+  const isCrisis = variant === "crisis";
+  const phase = typeof scenario.phase === "number"
+    ? PHASES.find((p) => p.n === scenario.phase)
+    : undefined;
   const lockedOptions = scenario.options.map((option) => ({
     option,
     locked: isOptionLocked(option, cashRaw),
@@ -549,8 +555,11 @@ function DecisionCard({
 
   return (
     <div className="flex flex-1 flex-col">
-      <span className="section-label">
-        Phase {scenario.phase}/5 · {phase?.name}
+      <span
+        className="section-label"
+        style={isCrisis ? { color: "#f59e0b" } : undefined}
+      >
+        {isCrisis ? "Beinahe-Pleite · Runway-Krise" : `Phase ${scenario.phase}/5 · ${phase?.name}`}
       </span>
       <h2 className="mt-1.5 text-[22px] font-bold leading-snug tracking-[-0.02em]">
         {scenario.title}
@@ -576,7 +585,9 @@ function DecisionCard({
               className="btn glass-card-inner flex items-start justify-between gap-3 p-3.5 text-left text-[13.5px] font-medium"
               style={{
                 opacity: dimmed ? 0.48 : 1,
-                borderColor: isChosen ? "var(--accent)" : locked ? "rgba(248,113,113,0.42)" : "transparent",
+                borderColor: isChosen
+                  ? isCrisis ? "#f59e0b" : "var(--accent)"
+                  : locked ? "rgba(248,113,113,0.42)" : "transparent",
                 borderWidth: 1.5,
                 borderStyle: "solid",
               }}
@@ -632,6 +643,11 @@ function DecisionCard({
                 {chosen.points} Punkte
               </span>
             </div>
+            {isCrisis && (
+              <p className="mt-2 rounded-lg px-3 py-2 text-[12px] font-medium" style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
+                Ihr gewinnt wieder Handlungsspielraum, bezahlt den Ausweg aber über Fokus, Vertrauen oder Substanz.
+              </p>
+            )}
             <p className="mt-2 text-[13px] leading-relaxed">{chosen.outcome}</p>
             <div className="mt-3">
               <EffectChips effects={chosen.effects} />
@@ -1074,7 +1090,7 @@ function Result({
       <div className="flex flex-col gap-2">
         <span className="section-label px-1">Deine Entscheidungen im Rückblick</span>
         {records.map((rec, i) => (
-          <RecapItem key={rec.scenario.id} rec={rec} index={i} />
+          <RecapItem key={`${rec.kind}-${rec.scenario.id}`} rec={rec} index={i} />
         ))}
       </div>
 
@@ -1098,6 +1114,10 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
   const [open, setOpen] = useState(false);
   // index wird für künftige Nummerierung vorgehalten
   void index;
+  const label =
+    rec.kind === "crisis"
+      ? `Beinahe-Pleite · ${rec.scenario.title}`
+      : `Phase ${rec.scenario.phase} · ${rec.scenario.title}`;
   return (
     <div className="glass-card overflow-hidden">
       <button
@@ -1106,7 +1126,7 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
       >
         <div className="min-w-0 flex-1">
           <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-            Phase {rec.scenario.phase} · {rec.scenario.title}
+            {label}
           </span>
           <p className="mt-0.5 truncate text-[13px] font-semibold">
             <Check size={13} className="mr-1 inline" style={{ color: "var(--accent)" }} />

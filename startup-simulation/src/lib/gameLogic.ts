@@ -7,6 +7,7 @@
 import {
   ALLOCATION,
   CASH_BANDS,
+  CRISIS,
   FOUNDER_TYPES,
   INITIAL_STATS,
   LUCK_EVENTS,
@@ -59,29 +60,58 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
 export type Slot =
   | { id: "p1" | "p2" | "p3" | "p4" | "p5"; kind: "decision"; phase: number }
   | { id: "verein" | "markt"; kind: "event"; category: EventCategory }
-  | { id: "alloc"; kind: "alloc" };
+  | { id: "alloc"; kind: "alloc" }
+  | { id: typeof CRISIS.slotId; kind: "crisis" };
 
 export type Step =
   | { kind: "decision"; scenario: Scenario }
   | { kind: "event"; event: LuckEvent }
-  | { kind: "alloc" };
+  | { kind: "alloc" }
+  | { kind: "crisis"; scenario: Scenario };
+
+const NORMAL_SLOTS: Slot[] = [
+  { id: "p1", kind: "decision", phase: 1 },
+  { id: "verein", kind: "event", category: "verein" },
+  { id: "p2", kind: "decision", phase: 2 },
+  { id: "p3", kind: "decision", phase: 3 },
+  { id: "alloc", kind: "alloc" },
+  { id: "p4", kind: "decision", phase: 4 },
+  { id: "markt", kind: "event", category: "markt" },
+  { id: "p5", kind: "decision", phase: 5 },
+];
+
+const CRISIS_SLOT: Slot = { id: CRISIS.slotId, kind: "crisis" };
 
 /**
  * Leitet die Slot-Reihenfolge aus der abgeschlossenen History ab.
  * S2 bleibt konstant bei 8 Slots; S3/S4 erweitern diese reine Ableitung.
  */
 export function deriveSlots(completed: CompletedStep[]): Slot[] {
-  void completed;
-  return [
-    { id: "p1", kind: "decision", phase: 1 },
-    { id: "verein", kind: "event", category: "verein" },
-    { id: "p2", kind: "decision", phase: 2 },
-    { id: "p3", kind: "decision", phase: 3 },
-    { id: "alloc", kind: "alloc" },
-    { id: "p4", kind: "decision", phase: 4 },
-    { id: "markt", kind: "event", category: "markt" },
-    { id: "p5", kind: "decision", phase: 5 },
-  ];
+  const crisisIndex = completed.findIndex((step) => step.kind === "crisis");
+  if (crisisIndex !== -1) {
+    return [
+      ...NORMAL_SLOTS.slice(0, crisisIndex),
+      CRISIS_SLOT,
+      ...NORMAL_SLOTS.slice(crisisIndex),
+    ];
+  }
+
+  const lastCompleted = completed.at(-1);
+  const canInsertBeforeNextNormalSlot = completed.length < NORMAL_SLOTS.length;
+  if (
+    completed.length > 0 &&
+    lastCompleted?.kind !== "crisis" &&
+    canInsertBeforeNextNormalSlot &&
+    deriveRunState(completed).cashRaw < CRISIS.triggerCash
+  ) {
+    return [
+      ...NORMAL_SLOTS.slice(0, completed.length),
+      CRISIS_SLOT,
+      ...NORMAL_SLOTS.slice(completed.length),
+    ];
+  }
+
+  return NORMAL_SLOTS;
 }
 
 function pickBySeed<T>(pool: T[], runSeed: number, key: string): T {
@@ -95,6 +125,16 @@ function pickBySeed<T>(pool: T[], runSeed: number, key: string): T {
 export function resolveStep(runSeed: number, slot: Slot): Step {
   if (slot.kind === "alloc") {
     return { kind: "alloc" };
+  }
+
+  if (slot.kind === "crisis") {
+    const pool = SCENARIOS.filter((s) => s.phase === "krise");
+    const scenario = pickBySeed(pool, runSeed, `${slot.id}:pick`);
+    const optionsRng = mulberry32(hashSlot(runSeed, `${slot.id}:options:${scenario.id}`));
+    return {
+      kind: "crisis",
+      scenario: { ...scenario, options: shuffle(scenario.options, optionsRng) },
+    };
   }
 
   if (slot.kind === "event") {
@@ -204,6 +244,7 @@ export function determineFounderType(stats: Stats): FounderType {
 }
 
 export interface DecisionRecord {
+  kind: "decision" | "crisis";
   scenario: Scenario;
   chosen: Option;
   /** Alternativen, die NICHT gewählt wurden (für den Rückblick). */
@@ -213,7 +254,8 @@ export interface DecisionRecord {
 export type CompletedStep =
   | { kind: "decision"; scenario: Scenario; chosen: Option }
   | { kind: "event"; event: LuckEvent }
-  | { kind: "alloc"; amounts: number[] };
+  | { kind: "alloc"; amounts: number[] }
+  | { kind: "crisis"; scenario: Scenario; chosen: Option };
 
 export interface DerivedRunState {
   stats: Stats;
@@ -234,11 +276,12 @@ export function deriveRunState(completed: CompletedStep[]): DerivedRunState {
   const records: DecisionRecord[] = [];
 
   completed.forEach((step) => {
-    if (step.kind === "decision") {
+    if (step.kind === "decision" || step.kind === "crisis") {
       cashRaw += step.chosen.effects.cash ?? 0;
       stats = applyEffects(stats, step.chosen.effects);
       points += step.chosen.points;
       records.push({
+        kind: step.kind,
         scenario: step.scenario,
         chosen: step.chosen,
         alternatives: step.scenario.options.filter((o) => o.id !== step.chosen.id),

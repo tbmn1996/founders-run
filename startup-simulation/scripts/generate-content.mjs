@@ -197,10 +197,15 @@ fragenParsed.rows.forEach((row, rowIdx) => {
   requireNonEmpty("fragen.tsv", lineNum, "titel", titel);
   requireNonEmpty("fragen.tsv", lineNum, "situation", situation);
 
-  // phase muss Ganzzahl 1-5 sein
-  const phase = parseIntCell("fragen.tsv", lineNum, "phase", phaseStr, false);
-  if (phase < 1 || phase > 5) {
-    fail("fragen.tsv", lineNum, `Spalte 'phase': Wert ${phase} außerhalb des erlaubten Bereichs 1–5`);
+  // phase ist entweder Ganzzahl 1-5 oder die Sondersituation "krise"
+  let phase;
+  if (phaseStr === "krise") {
+    phase = "krise";
+  } else {
+    phase = parseIntCell("fragen.tsv", lineNum, "phase", phaseStr, false);
+    if (phase < 1 || phase > 5) {
+      fail("fragen.tsv", lineNum, `Spalte 'phase': Wert ${phase} außerhalb des erlaubten Bereichs 1–5 oder 'krise'`);
+    }
   }
 
   fragenById.set(fId, { phase, titel, situation });
@@ -213,6 +218,13 @@ for (let p = 1; p <= 5; p++) {
   if (count < 2) {
     fail("fragen.tsv", 0, `Phase ${p} hat nur ${count} Frage(n) — mindestens 2 erwartet`);
   }
+}
+
+const krisenFragen = [...fragenById.entries()]
+  .filter(([, f]) => f.phase === "krise")
+  .map(([fId]) => fId);
+if (krisenFragen.length < 1) {
+  fail("fragen.tsv", 0, "Mindestens 1 Frage mit phase 'krise' erwartet");
 }
 
 // --- antworten.tsv ---
@@ -275,8 +287,17 @@ for (const fId of frageIds) {
   if (antworten.length !== 3) {
     fail("antworten.tsv", 0, `frage_id '${fId}' hat ${antworten.length} Antwort(en) — EXAKT 3 erwartet`);
   }
+  const frage = fragenById.get(fId);
   const hasNonNegativeCashOption = antworten.some((a) => (a.effects.cash ?? 0) >= 0);
-  if (!hasNonNegativeCashOption) {
+  const hasCashPositiveOption = antworten.some((a) => (a.effects.cash ?? 0) > 0);
+  if (frage?.phase === "krise" && !hasCashPositiveOption) {
+    fail(
+      "antworten.tsv",
+      0,
+      `Krisenfrage '${fId}' braucht mindestens 1 cash-positive Rettungsoption (geld > 0)`
+    );
+  }
+  if (frage?.phase !== "krise" && !hasNonNegativeCashOption) {
     warn(
       "antworten.tsv",
       0,
@@ -502,10 +523,11 @@ function renderOption(opt) {
 /** Szenario als mehrzeiliges TS-Literal. */
 function renderScenario(s) {
   const optStr = s.options.map(renderOption).join(",\n");
+  const phaseExpr = typeof s.phase === "string" ? esc(s.phase) : s.phase;
   return [
     `  {`,
     `    id: ${esc(s.id)},`,
-    `    phase: ${s.phase},`,
+    `    phase: ${phaseExpr},`,
     `    title: ${esc(s.title)},`,
     `    situation: ${esc(s.situation)},`,
     `    options: [`,

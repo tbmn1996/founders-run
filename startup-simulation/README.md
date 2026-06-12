@@ -8,7 +8,7 @@ Ein Durchlauf dauert ~3 Minuten: Szenario → 5 Runden mit Trade-off-Entscheidun
 (plus 2 Glücks-Events) → Founder-Typ + Punkte → Rückblick mit Alternativen →
 Abschlussfolie für den Verein.
 
-**Live:** https://founders-run-sepia.vercel.app
+**Live:** [founders-run-sepia.vercel.app](https://founders-run-sepia.vercel.app)
 
 ---
 

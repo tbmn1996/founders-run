@@ -1,5 +1,7 @@
 # Founder's Run — Plan „more-consequence": Vom Quiz zur Simulation
 
+> **Stand v1.1 (2026-06-12):** Codex-Peer-Review eingearbeitet (Krisen-Trigger + Schwellen konkret, Gating-Auffangnetz, Alloc-Dominanzformel, primäre Marker, Unterbau zeitgeboxt). Die Umsetzung erfolgt in 6 session-unabhängigen Schritten — **operative Roadmap: `docs/ROADMAP.md`** (§11 hier ist nur noch die Kurzfassung). Entschiedene Fragen: §13.
+
 ## 0. Kontext
 
 **Anlass:** Testfeedback zum Spiel „Founder's Run" (3-Minuten-Startup-Simulation des Venture Club Münster, Messe-Infostand, Handy-Browser): Es fühlt sich noch zu sehr wie ein Multiple-Choice-Quiz mit Punktwerten an. Entscheidungen verändern Werte, aber der Spielverlauf reagiert nicht darauf; Geld kann auf 0 fallen, ohne dass etwas passiert; die Budget-Runde hat keine spürbaren Folgen.
@@ -98,7 +100,7 @@ Events matchen direkt auf konkrete Antwort-IDs (`braucht_antwort: p2-tech:a`) st
 
 ## 4. Empfehlung
 
-**Ansatz A, in fünf inkrementellen Stufen (Roadmap §11), mit D als definierter Rückfalloption für das Echo-Feature.** Konkret die Kombination aus:
+**Ansatz A, in sechs session-unabhängigen Entwicklungsschritten (operative Roadmap: `docs/ROADMAP.md`, Kurzfassung §11), mit D als definierter Rückfalloption für das Echo-Feature.** Konkret die Kombination aus:
 1. Deterministischer Engine-Unterbau (Seed + abgeleitete Slots) — macht bedingte Auswahl, Zurück-Navigation und automatisierte Tests gleichzeitig korrekt.
 2. Cash-Bänder + sichtbares Options-Gating + max. 1 Krisen-Zwischenschritt (Soft-Fail statt Game Over).
 3. Marker + bedingter Echo-Slot + marker-priorisierte Phase-5-Auswahl + „Weil du…"-Anmoderation + Kausalzeilen im Rückblick.
@@ -119,7 +121,7 @@ Events matchen direkt auf konkrete Antwort-IDs (`braucht_antwort: p2-tech:a`) st
 
 | Kategorie | Inhalte |
 |---|---|
-| **Code (Entwicklung)** | Seed-RNG + Slot-Ableitung (`deriveSlots`/`resolveStep`); `deriveRunState`-Erweiterung (Marker-Set, ungeclamptes `cashRaw`, Krisen-Info, Kausal-Records); Cash-Bänder + Options-Gating (UI + Logik); Krisen-Schritt-Flow; Alloc-Umbau (Reserve, Bonus-Ersatz, Marker); Recap-Kausal-UI + Alloc-Zeile; `formatMoney`-Vorzeichen-Fix; Validator-Erweiterung (`generate-content.mjs`); Sim-Suite (`scripts/simulate.mjs` + `node:test`); CLAUDE.md-Invarianten-Update |
+| **Code (Entwicklung)** | Seed-RNG + Slot-Ableitung (`deriveSlots`/`resolveStep`); `deriveRunState`-Erweiterung (Marker-Set, ungeclamptes `cashRaw`, Krisen-Info, Kausal-Records); Cash-Bänder + Options-Gating (UI + Logik); Krisen-Schritt-Flow; Alloc-Umbau (Reserve, Bonus-Ersatz, Marker); Recap-Kausal-UI + Alloc-Zeile; `formatMoney`-Vorzeichen-Fix; Validator-Erweiterung (`generate-content.mjs`); Sim-Suite (`scripts/simulate.mjs`, heute via `bun` lokal); CLAUDE.md-Invarianten-Update |
 | **Content (danach, ohne Code)** | `marker.tsv` (Registry mit Beschreibung); `setzt_marker`-Zellen in `antworten.tsv`; `braucht_marker`/`bezug`-Zellen in `fragen.tsv`/`events.tsv`; 6–10 neue Echo-Events (positiv UND negativ); 1–2 Krisen-Szenarien; Band-/Krisen-Texte in `texte.tsv`; Punkte-Rebalancing; `content/README.md`-Erweiterung |
 | **Gemischt** | Schwellenwerte (Cash-Bänder, Alloc-Dominanz/Vernachlässigung) — als Code-Konstanten in `gameData.ts`, getunt über Sim-Report + Standtests; Score-Malus-Differenzierung (Krise überlebt vs. pleite am Ende); Founder-Typ-Feinschliff |
 | **Bewusst NICHT priorisieren** | Burn-Rate/Wirtschaftsmodell; echtes Branching; Telemetrie/Analytics (DSGVO-freier Stand bleibt); Persistenz/Accounts/CMS; Scoreboard-Backend; `prio`-/`verbietet_marker`-Spalten und Mehrfach-Marker pro Option (v1: genau 1 Marker, Dateireihenfolge entscheidet — nachrüstbar); hartes Game Over; Founders-Map-Aktivierung (wartet aufs App-Team) |
@@ -129,14 +131,14 @@ Events matchen direkt auf konkrete Antwort-IDs (`braucht_antwort: p2-tech:a`) st
 ## 6. Produktanforderungen (umsetzungs- und review-fähig)
 
 1. **PA-1 Cash-Bänder:** Cash hat drei abgeleitete Zustände (solide / angespannt / kritisch; Schwellen zentral konfiguriert). Der Zustand ist jederzeit im HUD erkennbar (Farbe + kurzes Label/Runway-Satz).
-2. **PA-2 Sichtbares Gating:** Optionen, deren Kosten das verfügbare Cash übersteigen, sind sichtbar gesperrt mit Begründung („Zu teuer — braucht €X"), niemals versteckt. Jedes Szenario garantiert ≥1 Option ohne Cash-Kosten (Validator-Regel) — pleite sein heißt „nur noch unbequeme Optionen", nie „keine Optionen".
-3. **PA-3 Krise statt stillem Clamping:** Fällt Cash nach einem committeten Schritt ins kritische Band, wird genau einmal pro Lauf ein Krisen-Zwischenschritt eingefügt (3 realistische Auswege, alle mit Kosten/Marker). Kosten werden nie mehr stillschweigend verschluckt; ein hartes Game Over gibt es nicht.
+2. **PA-2 Sichtbares Gating mit Auffangnetz:** Optionen, deren Cash-Kosten den Kontostand übersteigen, sind sichtbar gesperrt mit Begründung („Zu teuer — braucht €X"), niemals versteckt; Optionen, die die Kasse unter €5.000 drücken würden, tragen ein „Riskant"-Badge. Ein **Code-Guard** garantiert, dass nie alle Optionen eines Szenarios gesperrt sind: Die günstigste bleibt als „Letzter Ausweg" wählbar, auch wenn sie die Kasse rechnerisch überzieht — die Krise (PA-3) fängt das auf. Der Validator **warnt** (kein Build-Abbruch), wenn ein Szenario keine Option mit `geld ≥ 0` hat; für das Krisen-Szenario gilt hart: ≥1 cash-positive Rettungsoption.
+3. **PA-3 Krise statt stillem Clamping:** Fällt das intern ungeclampte Cash (`cashRaw`) nach einem committeten Schritt (Entscheidung, Event oder Verteil-Runde) **unter €3.000** (schließt ≤ 0 ein), wird genau einmal pro Lauf ein Krisen-Zwischenschritt eingefügt (3 realistische Auswege, alle mit Kosten/Marker, mindestens einer cash-positiv). Kosten werden nie mehr stillschweigend verschluckt; ein hartes Game Over gibt es nicht.
 4. **PA-4 Insolvenz hinterlässt Spuren:** Wer die Krise durchläuft bzw. pleite endet, bekommt ein eigenes Rückblick-Kapitel und differenzierten Score-Malus (Beinahe-Pleite < Pleite am Ende). Die −30-Endstrafe bleibt als Obergrenze erhalten.
-5. **PA-5 Marker-Gedächtnis:** Prägende Antworten setzen genau einen benannten Marker (namespaced, z. B. `tech:api`). Marker sind ausschließlich aus `completed` abgeleitet (Replay) — Zurück-Navigation bleibt automatisch konsistent.
+5. **PA-5 Marker-Gedächtnis:** Prägende Antworten setzen genau einen benannten **primären** Marker (namespaced, z. B. `tech:api`); das Schema ist bewusst auf spätere sekundäre Marker erweiterbar — kein dauerhaftes Limit. Marker sind ausschließlich aus `completed` abgeleitet (Replay) — Zurück-Navigation bleibt automatisch konsistent.
 6. **PA-6 Echo-Slot:** Der Markt-Event-Slot bevorzugt Events, deren `braucht_marker` erfüllt ist; ohne Treffer greift garantiert ein generisches Fallback-Event. Max. 1 markergebundenes Echo pro Lauf. Der Vereins-Event-Slot (VCM-Branding) bleibt unverändert.
 7. **PA-7 Konsequente Bewährungsprobe:** Die Phase-5-Szenario-Auswahl priorisiert Szenarien mit erfülltem `braucht_marker` (gleicher Selektionsmechanismus wie PA-6), Fallback: heutige Zufallsauswahl.
 8. **PA-8 Erlebte Kausalität:** Jedes markergebunden ausgespielte Element (Echo, P5, Krise) zeigt eine kurze `bezug`-Anmoderation („Weil ihr früher … habt"). Keine stillen Konsequenzen.
-9. **PA-9 Budget-Wette:** Die Verteil-Runde erlaubt Teilinvestition (Rest bleibt sichtbar als Rücklage in der Kasse); der +12-Pauschalbonus entfällt bzw. wird score-neutral ersetzt; ein dominanter Schwerpunkt setzt einen `fokus:`-Marker, komplett leere Buckets (bei nennenswerter Investition) einen `vernachlaessigt:`-Marker. Die Verteilung erscheint im Rückblick.
+9. **PA-9 Budget-Wette:** Die Verteil-Runde erlaubt Teilinvestition (Rest bleibt sichtbar als Rücklage in der Kasse); der +12-Pauschalbonus entfällt ersatzlos; ein dominanter Schwerpunkt setzt einen `fokus:`-Marker (exakte Dominanzformel: §8.8, sonst `fokus:balanced`), komplett leere Buckets bei nennenswerter Investition einen `vernachlaessigt:`-Marker, deutliche Zurückhaltung mit gesunder Kasse `cash_discipline` (wird über ein positives Echo belohnt). Die Verteilung erscheint im Rückblick.
 10. **PA-10 Nachvollziehbarkeit:** Jede Wertänderung hat eine sichtbare Quelle (Delta-Chips + Karte + ggf. Bezug). Der Rückblick zeigt Kausalketten (Entscheidung → ausgelöste Folge) zusätzlich zu den heutigen Alternativen.
 11. **PA-11 Determinismus & Robustheit:** Ein Lauf ist durch (Seed, Entscheidungen) vollständig bestimmt; Zurück + identisch neu wählen reproduziert exakt denselben Verlauf (inkl. Optionsreihenfolge). Refresh = Neustart bleibt akzeptiert.
 12. **PA-12 Format-Erhalt:** Standardlauf 8 Schritte (~3 Min), Krisenlauf max. 9 Schritte (~4 Min); keine neuen Pflicht-Erklärscreens; `Result`-Schnittstelle (Founders-Map-Hooks) unverändert.
@@ -173,6 +175,10 @@ Events matchen direkt auf konkrete Antwort-IDs (`braucht_antwort: p2-tech:a`) st
 5. **Glück klein, Konsequenz mittel:** Zufalls-Events bleiben klein (Invariante); markergebundene Echos dürfen größer sein als Glück, weil verdient — neue Invariante fürs Repo-CLAUDE.md.
 6. **Wertebereiche überwachen:** Säulen haben kein Logik-Maximum (nur UI-Max 80) — die Sim reportet Min/Max je Säule, damit Marker-/Alloc-Änderungen die Anzeige nicht sprengen.
 7. **Pleite-Differenzierung:** Krise überlebt = Kosten bereits über Optionen + Marker bezahlt (kein Pauschal-Malus); Cash ≤ 0 am Ende = −30 wie heute.
+8. **Konkrete Default-Schwellen** (zentrale Konstanten in `gameData.ts`, per Playtest/Sim tunbar):
+   - **Cash-Bänder:** solide ≥ €10.000 · angespannt €5.000–9.999 · kritisch < €5.000. „Riskant"-Badge auf Optionen, deren Wahl die Kasse unter €5.000 drücken würde. **Krisen-Trigger: `cashRaw` < €3.000** nach einem committeten Schritt (max. 1/Lauf; schließt ≤ 0 ein — deckt damit auch ungegatete Events und den „Letzter Ausweg"-Fall ab).
+   - **Alloc-Dominanz:** `fokus:<bucket>` nur wenn höchster Bucket ≥ €6.000 **und** ≥ 40 % des ausgegebenen Budgets **und** Abstand zum zweithöchsten ≥ €2.000; sonst bei Investition ≥ €6.000 `fokus:balanced`. `vernachlaessigt:datenschutz` wenn ≥ €9.000 investiert und der Impact-Bucket €0 bleibt. `cash_discipline` wenn ≤ 40 % des Pots ausgegeben und Cash danach ≥ €10.000.
+   - **Bewusst kein `runway_risk`-Marker:** Das Cash-Band *ist* bereits der abgeleitete Zustand dafür (steuert UI und Krise) — ein zusätzlicher Marker würde dieselbe Wahrheit duplizieren.
 
 ---
 
@@ -199,23 +205,26 @@ Events matchen direkt auf konkrete Antwort-IDs (`braucht_antwort: p2-tech:a`) st
 | 5 | goBack/Krisen-Randfälle erzeugen inkonsistente Zustände | Alles abgeleitet (Seed + `completed`), kein gecachter Timeline-State; Determinismus-Property-Test; React-StrictMode-sicher weil idempotent |
 | 6 | Spielzeit wächst über Messe-Format | Hartes Budget: max. +1 Schritt (nur Krise), keine neuen Pflicht-Screens, `bezug` ≤1 Satz; Stoppuhr-Playthroughs als Abnahme |
 | 7 | Zu deterministisch — zweiter Run fühlt sich gleich an | Seed pro Run neu; Pools bleiben zufällig innerhalb der Eligibility; Fallbacks rotieren |
-| 8 | Score-Vergleichbarkeit am Stand bricht | Formel stabil; Bonus-Wegfall kompensieren; Sim-Verteilungsvergleich alt/neu vor Merge |
-| 9 | Sim-Suite scheitert an TS-Imports (extensionslose Specifier, `node --test`) | Stufe 1 klärt Import-Strategie: Extension-Imports + `allowImportingTsExtensions` (Zero-Dependency, gegen Webpack-Dev UND Turbopack-Build verifizieren); Fallback `tsx` nur nach Freigabe |
+| 8 | Score-Vergleichbarkeit am Stand bricht | Formel stabil; +12-Wegfall dokumentieren (Annahme: Scoreboard startet zur Messe frisch); Sim-Verteilungsvergleich alt/neu vor Merge |
+| 9 | Sim-/Check-Skripte scheitern an TS-Imports (extensionslose Specifier in `node`) | Heute pragmatisch: Skripte lokal mit `bun` ausführen (auf dem Rechner installiert, keine Projekt-Dependency); saubere `node:test`-Integration ist Follow-up nach der Messe |
+| 10 | Same-Day-Deploy 3 Tage vor der Messe (15.06.) | Gates A–D: jeder Zwischenstand ist ein konsistentes Spiel; Merge auf `main` erst nach S6-Gesamtverifikation; Vercel-Rollback-Ziel vor dem Merge notieren; Live-Smoke über Mobilfunk (Uni-Netz fängt `*.vercel.app` ab) |
 
 ---
 
-## 11. Priorisierte Roadmap (jede Stufe einzeln shippable & testbar)
+## 11. Roadmap (Kurzfassung — operative Detailplanung in `docs/ROADMAP.md`)
 
-| Stufe | Inhalt | Priorität | Verifikation | Risiko |
-|---|---|---|---|---|
-| **1. Deterministischer Unterbau** | `runSeed`-State ersetzt `timeline`-State; `deriveSlots(completed)` + `resolveStep(seed, slot, marker)` mit **slot-ID-gekeytem** PRNG (mulberry32) — nicht sequenziell, nicht index-gekeyt (sonst ändert eine Krisen-Injektion alle Folge-Draws); Options-Shuffle aus demselben Stream; `buildRun`/`pickLuckEvent` gehen darin auf; TS-Import-Fix; `simulate.mjs`-Skelett + Determinismus-Property-Test. **Spielverhalten: unverändert.** | Must | `npx tsc --noEmit` + `npm run build` grün; manuell: Zurück+Vor → identische Frage & Optionsreihenfolge; Property-Test | niedrig |
-| **2. Cash-Realität** | `cashBand()`, HUD-Färbung + Band-Label, Options-Gating („zu teuer", PA-2), `formatMoney`-Fix, ungeclamptes `cashRaw` in `deriveRunState`, Validator-Regel „≥1 kostenfreie Option/Szenario" (+ ggf. 2–3 Content-Zellen nachziehen) | Must | Worst-Case-Pfad manuell; Validator-Rot/Grün-Probe; Sim-Invariante „nie 0 wählbare Optionen" | niedrig–mittel |
-| **3. Gedächtnis (Herzstück)** | TSV-Migration (Lockstep): `setzt_marker` (antworten), `braucht_marker`+`bezug` (fragen, events), `marker.tsv`; Marker in `deriveRunState`; Echo-Slot mit Fallback (PA-6); **P5-Priorisierung aus Entscheidungs-Markern (PA-7)** — gleicher Selektionscode, Content fast gratis (4 Zellen + 4 Bezugs-Sätze); Echo-Badge + Bezug-UI; Recap-Kausalzeilen; 6–10 Echo-Events | Must | Sim: Fallback-Garantie, max 1 Echo; gezielte Läufe (Marker → Echo erscheint mit Bezug; ohne → generisch); Text-Review | mittel (Content-Qualität) |
-| **4. Krise & Beinahe-Pleite** | Krisen-Slot-Injektion in `deriveSlots` (max 1, Trigger = kritisches Band nach committetem Schritt); Krisen-Content (3 Optionen + Marker); Result-Trigger gegen `deriveSlots(nextCompleted).length`; Recap-Kapitel; Score-Differenzierung | Should (stark empfohlen) | Sim-Krisen-Quote-Report; manuell durch Krise zurück/vor navigieren; Stoppuhr ≤ ~4 Min | mittel |
-| **5. Budget-Wette** | Bestätigen ohne Vollverteilung (implizite Reserve — `computeAllocationPot`/`applyAllocation` bleiben unverändert); +12-Bonus ersetzen (Logik `gameLogic.ts:180` UND UI-Badge synchron); `fokus:`/`vernachlaessigt:`-Marker (Schwellen; vernachlässigt nur bei nennenswerter Investition); Alloc im Recap; Hinweis-Texte | Should | Alloc-Randfälle (pot<500, alles Reserve, Dominanz); Sim-Score-Verteilung alt/neu (Scoreboard!) | niedrig–mittel |
-| **6. Feinschliff** | Punkte-Rebalancing (Quiz-Entschärfung §8.3); weitere positive Ernte-Events; Korridor-Schwellen in Sim scharf schalten; Repo-CLAUDE.md-Invarianten aktualisieren („8 + max 1 Krisenschritt", neue Verifikationskommandos) | Nice→Should | Sim-Korridore grün; 3 geskriptete Playthroughs (Pleite-Pfad, Enterprise-Pfad, Sparsam-Pfad) | niedrig |
+Die Umsetzung ist in **6 session-unabhängige Entwicklungsschritte** geschnitten, die jeweils in einer frischen Agent-Session umsetzbar sind (Ziel: alle am 2026-06-12, am Ende Merge auf `main` = Auto-Deploy via Vercel). Jede Session hat in `docs/ROADMAP.md` einen self-contained Block mit Arbeitsregeln, Aufgaben, Architektur-Details, Definition of Done und kopierbarem Session-Start-Prompt.
 
-Nach **Stufe 3** ist das Produktziel zu ~70 % erlebbar; Stufen sind einzeln mergebar (Branch `more-consequence`, PR-fähig je Stufe). Bewusste Abweichung vom Architektur-Stresstest: P5-Priorisierung in Stufe 3 statt 5, weil sie denselben Selektionsmechanismus nutzt und Kausalität, die in eine *Entscheidung* mündet, stärkere Selbstwirksamkeit erzeugt als ein weiteres Event.
+| # | Session | Kern | Gate danach |
+|---|---|---|---|
+| S1 | Cash-Sichtbarkeit | Bänder + HUD-Färbung, sichtbares Gating („Zu teuer"), „Riskant"-Badge, „Letzter Ausweg"-Guard, `formatMoney`-Fix, `cashRaw` | **A** (deploybar) |
+| S2 | Deterministischer Unterbau (zeitgeboxt) | `runSeed` + `deriveSlots` + `resolveStep` mit slot-ID-gekeytem PRNG inkl. Options-Shuffle; Verhalten unverändert | — |
+| S3 | Krise & Beinahe-Pleite | Krisen-Slot-Injektion (Trigger `cashRaw` < €3.000, max. 1), Krisen-Content via `phase = krise`, Recap-Eintrag | **B** (deploybar) |
+| S4 | Gedächtnis (Herzstück) | TSV-Lockstep-Migration (Marker/Bezug), Echo-Slot + P5-Priorisierung (ein Selektor), Echo-Badge + „Weil ihr…", 4–6 Echo-Events (≥2 positiv), Recap-Kausalzeile | **C** (Kernziel) |
+| S5 | Budget-Wette | Reserve statt Vollausgabe-Zwang, +12-Bonus raus (Logik+UI), Dominanz-/`vernachlaessigt:`-/`cash_discipline`-Marker (§8.8), Alloc im Recap | **D** (komplett) |
+| S6 | Stabilisierung + Deploy | simulate.mjs light (harte Invarianten + Report), 3 Stoppuhr-Playthroughs, Doku/CLAUDE.md, Merge → `main`, Live-Smoke via Mobilfunk, Rollback-Ziel notiert | **Live** |
+
+**Reihenfolge-Begründung:** S1 zuerst (sichtbarer Nutzen sofort — Review-Empfehlung gegen „unsichtbare Infrastruktur zuerst"); S2 bleibt zwingend **vor** S3/S4, weil bedingte Auswahl ohne deterministisches Lazy-Resolve die Zurück-Navigation bricht — dafür hart zeitgeboxt. P5-Priorisierung liegt in S4 (gleicher Selektionscode wie Echo-Slot, Content fast gratis, und Kausalität, die in eine *Entscheidung* mündet, erzeugt stärkere Selbstwirksamkeit als ein weiteres Event). Die Gates A–D sind die Stoppregeln: Was bis Tagesende nicht verifiziert ist, fliegt aus dem Merge — jedes Gate hinterlässt ein konsistentes Spiel.
 
 ---
 
@@ -224,29 +233,34 @@ Nach **Stufe 3** ist das Produktziel zu ~70 % erlebbar; Stufen sind einzeln merg
 1. **Determinismus:** Gleicher Seed + gleiche Wahlen (auch mit Zurück-Umwegen) → bit-identischer Endzustand inkl. Optionsreihenfolge (Property-Test grün).
 2. **Echo:** Lauf mit gesetztem Marker und passendem Pool-Event zeigt im Echo-Slot das bedingte Event **mit** Bezug-Anmoderation; Lauf ohne Marker zeigt ein generisches Event. Nie >1 markergebundenes Echo. (Sim + manuell)
 3. **P5-Kausalität:** Bei gesetztem passendem Marker erscheint das zugehörige P5-Szenario priorisiert mit Bezug; im Rückblick ist die Kette Entscheidung→Folge sichtbar.
-4. **Cash-Konsequenz:** Jeder Lauf, der das kritische Band erreicht, enthält ≥1 sichtbare Folge (Band-Anzeige, Sperrung oder Krise); Erreichen des kritischen Bands nach einem Commit injiziert genau einmal den Krisen-Schritt; Kosten > Kassenstand sind nicht mehr wählbar (kein stilles Verschlucken mehr).
-5. **Keine Sackgassen:** 10.000 Sim-Läufe (random + Extremstrategien): nie 0 wählbare Optionen, jeder Slot auflösbar, `slots.length ≤ 9`, Spiel terminiert immer im Result.
+4. **Cash-Konsequenz:** Jeder Lauf, der das kritische Band erreicht, enthält ≥1 sichtbare Folge (Band-Anzeige, Sperrung, Badge oder Krise); `cashRaw` < €3.000 nach einem Commit injiziert genau einmal den Krisen-Schritt; Kosten > Kassenstand sind nicht mehr wählbar — einzige Ausnahme ist der gekennzeichnete „Letzter Ausweg" (nie alle Optionen gesperrt), dessen Überziehung die Krise auslöst. Kein stilles Verschlucken von Kosten mehr.
+5. **Keine Sackgassen:** ≥2.000 Sim-Läufe heute (Ausbau auf 10.000 im Follow-up; random + Extremstrategien): nie 0 wählbare Optionen, jeder Slot auflösbar, `slots.length ≤ 9`, Spiel terminiert immer im Result.
 6. **Budget-Wette:** Zwei Läufe mit identischen Entscheidungen, aber gegensätzlicher Allokation (z. B. alles Marketing vs. alles Datenschutz + Reserve) unterscheiden sich in mindestens einem späteren Spielelement und im Rückblick; Reserve ist wählbar und im Recap ausgewiesen.
 7. **Nachvollziehbarkeit:** Stichproben-Playthrough: jede Wertänderung einer Quelle zuordenbar (Chips/Karte/Bezug); keine stille Änderung.
 8. **Format:** Standardlauf 8 Schritte, Krisenlauf 9; geskriptete Playthroughs ≤ ~4 Min; mobile Darstellung (max-w-md, Touch-Targets) unverändert nutzbar.
-9. **Content-Robustheit:** Validator-Rotproben (unbekannter Marker, fehlender Fallback im Echo-Pool, Szenario ohne kostenfreie Option, fehlende Spalte) brechen den Build mit deutscher Fehlermeldung + Datei/Zeile; Grünprobe baut durch.
+9. **Content-Robustheit:** Validator-Rotproben (unbekannter Marker, fehlender Fallback im Echo-Pool/pro Phase, Krisen-Szenario ohne cash-positive Option, fehlende Spalte) brechen den Build mit deutscher Fehlermeldung + Datei/Zeile; Szenario ohne `geld ≥ 0`-Option erzeugt eine Warnung; Grünprobe baut durch.
 10. **Kompatibilität:** `npx tsc --noEmit` + `npm run build` grün; `Result`-Signatur/Founders-Map-Hooks unverändert; Score-Verteilung alt/neu dokumentiert verglichen.
-11. **Quiz-Entschärfung (nach Stufe 6):** ≥8/20 Szenarien ohne eindeutig dominante Option (Top-Abstand ≤4 Punkte), gemessen per Content-Skript.
+11. **Quiz-Entschärfung (Follow-up nach der Messe):** ≥8/20 Szenarien ohne eindeutig dominante Option (Top-Abstand ≤4 Punkte), gemessen per Content-Skript.
 
 ---
 
-## 13. Offene Fragen (entscheidungsrelevant, je mit Empfehlung)
+## 13. Entschiedene und offene Fragen
 
-1. **Krisen-Trigger:** Band-Schwelle (z. B. < €3.000) statt „Wahl würde unter 0 drücken"? Die beiden Mechanismen schließen sich teilweise aus, weil Gating (PA-2) Unter-0-Versuche fast unmöglich macht. **Empfehlung: Band-Schwelle** — muss vor Stufe 2/4 fixiert sein.
-2. **+12-Alloc-Bonus-Ersatz:** ersatzlos streichen (einfach, verschiebt Score-Ökonomie um −12) oder kleiner kontextneutraler Ausgleich? **Empfehlung: ersatzlos + Kompensation im Punkte-Rebalancing**, Sim-Vergleich entscheidet.
-3. **Sim-Suite-Imports:** Falls der Zero-Dependency-Weg (Extension-Imports + `allowImportingTsExtensions`) im Next-Build hakt: Ist die Einzel-devDependency `tsx` freigegeben? **Empfehlung: erst Zero-Dependency versuchen; `tsx` nur nach deiner Freigabe.**
-4. **Tiefe der Quiz-Entschärfung:** Punkte-Rebalancing aller 20 Szenarien jetzt (Stufe 6) oder nach erstem Messe-Einsatz mit echtem Spielerfeedback? **Empfehlung: nach Stufe 3–5 mit Sim-Daten, vor der nächsten Messe.**
+**Entschieden (Peer-Review + Owner, 2026-06-12):**
+1. **Krisen-Trigger:** Band-basiert — `cashRaw` < €3.000 nach einem committeten Schritt (nicht „Unter-0-Versuch"); Gating sperrt zu teure Optionen, der „Letzter Ausweg"-Guard verhindert Voll-Sperrung (PA-2/PA-3, §8.8).
+2. **+12-Alloc-Bonus:** entfällt ersatzlos; Kompensation erst mit dem Punkte-Rebalancing nach der Messe.
+3. **Quiz-Entschärfung (Punkte-Rebalancing):** Follow-up nach der Messe, mit Sim- und Standdaten.
+4. **Skript-Runner:** Check-/Sim-Skripte laufen heute lokal via `bun` (auf dem Rechner installiert, keine Projekt-Dependency); `node:test`-Integration ist Follow-up — keine neue devDependency nötig.
+
+**Noch offen:**
+1. **Scoreboard-Annahme bestätigen:** Der +12-Wegfall verschiebt Scores um ca. −12; Annahme: Das Scoreboard startet zur Messe frisch, alte Scores zählen nicht weiter (Konfidenz 85 % — falls doch, braucht es einen kleinen Ausgleichsbonus).
+2. **Schwellen-Feintuning:** €10k/€5k/€3k und die Dominanzformel sind Startwerte; finale Justierung nach dem ersten Playtest (Konfidenz 80 % — Konstanten liegen zentral in `gameData.ts`, Änderung = 1 Zeile).
 
 ---
 
 ## 14. Verifikation (extern prüfbar)
 
-1. **Automatisch, je Stufe:** `npx tsc --noEmit` · `npm run build` (führt Content-Validator aus) · `node --test scripts/` (Determinismus-Property, Slot-Invarianten) · `node scripts/simulate.mjs --runs 10000 --report` (Sackgassen, Krisen-Quote, Score-/Säulen-Verteilungen, Fallback-Garantie).
+1. **Automatisch, je Session:** `npx tsc --noEmit` · `npm run build` (führt Content-Validator aus) · Determinismus-/Invarianten-Checks und `scripts/simulate.mjs` (heute ≥2.000 Läufe, lokal via `bun` ausgeführt; `node:test`-Integration + 10.000er-Läufe als Follow-up) — Sackgassen, Krisen-Quote, Score-/Säulen-Verteilungen, Fallback-Garantie.
 2. **Content-Negativproben:** je Validator-Regel ein bewusst kaputtes TSV-Fixture → Build muss mit verständlicher deutscher Meldung brechen.
 3. **Manuelle Playthrough-Skripte (Stoppuhr, am Handy):** (a) Pleite-Pfad (teuerste Optionen) → Band-Eskalation, Gating, Krise, Recap-Kapitel; (b) Enterprise/API-Pfad → Echo + passende P5 mit Bezug; (c) Sparsam-Pfad mit Reserve → keine Krise, Reserve im Recap; jeweils mit Zurück-Umwegen zur Determinismus-Kontrolle.
 4. **Score-Regression:** Sim-Verteilungsvergleich `main` vs. `more-consequence` dokumentiert (Scoreboard-Fairness).
@@ -259,11 +273,11 @@ Nach **Stufe 3** ist das Produktziel zu ~70 % erlebbar; Stufen sind einzeln merg
 - `src/app/page.tsx` — `Game`: `runSeed` statt `timeline`-State (Z. 258, 270-275), `advance`/`finishAlloc` gegen `deriveSlots(nextCompleted).length` (Z. 301, 314), Krisen-Zweig in `advance`; `DecisionCard`: Locked-State + Badge + Bezug (Krise rendert über dieselbe Komponente); `EventCard`: Bezug; `AllocationCard`: Button-Freigabe (Z. 887-894) + Badge-Ersatz (Z. 780-793) + Reserve-Label; `Result`/`RecapItem`: Kausalzeilen, Alloc-Zeile, Krisen-Kapitel — Founders-Map-Hooks unangetastet.
 - `scripts/generate-content.mjs` — Header-Erweiterung (Exact-Match beachten!), `marker.tsv`-Parsing, neue Regeln (Marker-Syntax/-Referenzen, Fallback-Garantien, kostenfreie Option, Krisen-Pool).
 - `content/*.tsv` + `marker.tsv` + `content/README.md` — Lockstep-Migration; `texte.tsv` um Band-/Krisen-Texte.
-- `scripts/simulate.mjs` + `scripts/*.test.mjs` — Sim & Tests (node:test, Zero-Dependency-Imports).
+- `scripts/simulate.mjs` + Check-Skripte — Sim & Invarianten (heute lokal via `bun` ausgeführt; `node:test`-Integration Follow-up).
 - Repo-`CLAUDE.md` — Invarianten-Update (Timeline „8 + max 1", Alloc-Reserve, neue Checks).
 
 **TSV-Schema-Erweiterung (v1, deutsch, leere Zellen erlaubt):**
-- `antworten.tsv` + Spalte `setzt_marker` (genau 0–1 Marker)
+- `antworten.tsv` + Spalte `setzt_marker` (genau 0–1 **primärer** Marker; sekundäre Marker-Spalte später nachrüstbar)
 - `fragen.tsv` + Spalten `braucht_marker`, `bezug`
 - `events.tsv` + Spalten `braucht_marker`, `bezug`
 - neu `marker.tsv`: `marker  beschreibung`

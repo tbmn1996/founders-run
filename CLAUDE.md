@@ -41,6 +41,16 @@ Beides muss grün sein, bevor Änderungen als fertig gelten. Der Build läuft au
 
 Wenn auf einem Feature-Branch gearbeitet wird (alles außer `main`), am Ende jedes Turns die abgeschlossenen Änderungen committen und auf den zugehörigen GitHub-Branch pushen. Auf `main` nicht automatisch pushen, außer Thomas hat das explizit für diesen Turn freigegeben.
 
+Sobald ein Turn abgeschlossen ist und die Änderungen auf GitHub nachvollziehbar sind, die Abschlussmeldung immer zusätzlich als Codeblock in diesem Format ausgeben:
+
+```text
+Commit-SHA:
+Geänderte Dateien:
+Tests:
+Manuelle Checks:
+Bekannte Risiken:
+```
+
 ## Architektur
 
 Stack: **Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · framer-motion · lucide-react**. Die gesamte App ist eine einzige Client-Seite, kein Backend, keine Persistenz — die Sim speichert bewusst nichts (Scoreboard lebt in der Messe-App).

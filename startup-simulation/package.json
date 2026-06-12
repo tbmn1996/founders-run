@@ -6,7 +6,7 @@
   "scripts": {
     "generate": "node scripts/generate-content.mjs",
     "predev": "npm run generate",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "prebuild": "npm run generate",
     "build": "next build",
     "start": "next start",

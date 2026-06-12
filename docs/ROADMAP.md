@@ -35,6 +35,7 @@
 | Eva-Review B2B-Texte | Alle Outcome-Texte auf korrekte Zielgruppe prüfen (Service-/Vertriebsteams, nicht Kleinbetriebe) |
 | Eva-Review Abschlussfolie | CTA und Vereinsvorteile auf Aktualität prüfen |
 | Szenario-Pool erweitern | Aktuell 20 Szenarien (4 pro Phase) — mehr Varianz möglich |
+| CMS-Handbuch | Schritt-für-Schritt-Anleitung für den gesamten CMS-Prozess: TSV editieren → Build testen → deployen |
 
 ### Founders-Map-Integration
 

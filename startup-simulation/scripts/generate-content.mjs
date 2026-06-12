@@ -108,6 +108,11 @@ function fail(filename, lineNum, message) {
   process.exit(1);
 }
 
+function warn(filename, lineNum, message) {
+  const location = lineNum > 0 ? `content/${filename}, Zeile ${lineNum}` : `content/${filename}`;
+  console.warn(`⚠️  ${location}: ${message}`);
+}
+
 /** Validiert Header-Spalten: genau die Pflichtmenge, keine unbekannten. */
 function validateHeaders(parsed, required) {
   const { headers, filename } = parsed;
@@ -269,6 +274,14 @@ for (const fId of frageIds) {
   const antworten = antwortenByFrage.get(fId) || [];
   if (antworten.length !== 3) {
     fail("antworten.tsv", 0, `frage_id '${fId}' hat ${antworten.length} Antwort(en) — EXAKT 3 erwartet`);
+  }
+  const hasNonNegativeCashOption = antworten.some((a) => (a.effects.cash ?? 0) >= 0);
+  if (!hasNonNegativeCashOption) {
+    warn(
+      "antworten.tsv",
+      0,
+      `frage_id '${fId}' hat keine Option mit geld ≥ 0 — Laufzeit-Guard "Letzter Ausweg" muss greifen`
+    );
   }
 }
 

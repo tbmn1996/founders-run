@@ -37,6 +37,10 @@ npm run build      # Produktions-Build → muss fehlerfrei durchlaufen
 
 Beides muss grün sein, bevor Änderungen als fertig gelten. Der Build läuft automatisch das Content-Generator-Skript — ein ungültiges TSV bricht den Build ab.
 
+## Git-Arbeitsregel
+
+Wenn auf einem Feature-Branch gearbeitet wird (alles außer `main`), am Ende jedes Turns die abgeschlossenen Änderungen committen und auf den zugehörigen GitHub-Branch pushen. Auf `main` nicht automatisch pushen, außer Thomas hat das explizit für diesen Turn freigegeben.
+
 ## Architektur
 
 Stack: **Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · framer-motion · lucide-react**. Die gesamte App ist eine einzige Client-Seite, kein Backend, keine Persistenz — die Sim speichert bewusst nichts (Scoreboard lebt in der Messe-App).

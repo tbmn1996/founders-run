@@ -68,6 +68,17 @@ export interface FounderType {
   emoji: string;
 }
 
+export type CashBandKey = "solid" | "strained" | "critical";
+
+export const CASH_BANDS: Record<
+  CashBandKey,
+  { label: string; min: number }
+> = {
+  solid:    { label: "Solide",     min: 10000 },
+  strained: { label: "Angespannt", min: 5000 },
+  critical: { label: "Kritisch",   min: 0 },
+};
+
 // ---------------------------------------------------------------------------
 // Stat-Metadaten: Label, Emoji, Maximalwert je Säule/Cash.
 // Quelle: STAT-Objekt im HTML-Prototyp.
@@ -132,4 +143,3 @@ export const INITIAL_STATS: Stats = {
   impact:     20,
   cash:       20000,
 };
-

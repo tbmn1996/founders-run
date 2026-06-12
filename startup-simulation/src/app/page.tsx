@@ -21,6 +21,7 @@ import {
   PHASES,
   SCENARIO_INTRO,
   STAT_META,
+  CASH_BANDS,
   type EventCategory,
   type LuckEvent,
   type Option,
@@ -35,6 +36,7 @@ import {
   deriveRunState,
   determineFounderType,
   formatMoney,
+  isOptionLocked,
   pickLuckEvent,
   type CompletedStep,
   type DecisionRecord,
@@ -230,7 +232,7 @@ function EffectChips({ effects }: { effects: Partial<Stats> }) {
         // Cash-Werte ohne doppeltes Geld-Label.
         const label =
           k === "cash"
-            ? `${STAT_META[k].label} ${pos ? "+" : "−"}${formatMoney(v)}`
+            ? `${STAT_META[k].label} ${pos ? "+" : ""}${formatMoney(v)}`
             : `${STAT_META[k].label} ${pos ? "+" : ""}${v}`;
         return (
           <span
@@ -260,7 +262,7 @@ export default function Game() {
   /** Temporäre Wahl — steuert Feedback-Panel, wird erst beim Weiterklicken committet. */
   const [chosen, setChosen] = useState<Option | null>(null);
 
-  const { stats, points, records } = useMemo(
+  const { stats, cashRaw, points, records } = useMemo(
     () => deriveRunState(completed),
     [completed]
   );
@@ -349,6 +351,7 @@ export default function Game() {
             stepIndex={step}
             total={timeline.length}
             stats={stats}
+            cashRaw={cashRaw}
             chosen={chosen}
             onChoose={choose}
             onAdvance={advance}
@@ -464,6 +467,7 @@ function Sim({
   stepIndex,
   total,
   stats,
+  cashRaw,
   chosen,
   onChoose,
   onAdvance,
@@ -474,6 +478,7 @@ function Sim({
   stepIndex: number;
   total: number;      // = 8 Schritte
   stats: Stats;
+  cashRaw: number;
   chosen: Option | null;
   onChoose: (s: Scenario, o: Option) => void;
   onAdvance: () => void;
@@ -523,6 +528,7 @@ function Sim({
       ) : (
         <DecisionCard
           scenario={step.scenario}
+          cashRaw={cashRaw}
           chosen={chosen}
           onChoose={onChoose}
           onAdvance={onAdvance}
@@ -538,16 +544,28 @@ function Sim({
 
 function DecisionCard({
   scenario,
+  cashRaw,
   chosen,
   onChoose,
   onAdvance,
 }: {
   scenario: Scenario;
+  cashRaw: number;
   chosen: Option | null;
   onChoose: (s: Scenario, o: Option) => void;
   onAdvance: () => void;
 }) {
   const phase = PHASES.find((p) => p.n === scenario.phase);
+  const lockedOptions = scenario.options.map((option) => ({
+    option,
+    locked: isOptionLocked(option, cashRaw),
+    cost: Math.max(0, -(option.effects.cash ?? 0)),
+  }));
+  const lastResort =
+    lockedOptions.every(({ locked }) => locked)
+      ? lockedOptions.reduce((best, current) => current.cost < best.cost ? current : best).option
+      : null;
+
   return (
     <div className="flex flex-1 flex-col">
       <span className="section-label">
@@ -563,21 +581,47 @@ function DecisionCard({
       <div className="mt-4 flex flex-col gap-2.5">
         {scenario.options.map((o) => {
           const isChosen = chosen?.id === o.id;
-          const dimmed = chosen && !isChosen;
+          const cashEffect = o.effects.cash ?? 0;
+          const cost = Math.max(0, -cashEffect);
+          const isLastResort = lastResort?.id === o.id;
+          const locked = isOptionLocked(o, cashRaw) && !isLastResort;
+          const risky = cashEffect < 0 && cashRaw + cashEffect < CASH_BANDS.strained.min;
+          const dimmed = (chosen && !isChosen) || locked;
           return (
             <button
               key={o.id}
-              disabled={!!chosen}
+              disabled={!!chosen || locked}
               onClick={() => onChoose(scenario, o)}
-              className="btn glass-card-inner flex items-center justify-between gap-3 p-3.5 text-left text-[13.5px] font-medium"
+              className="btn glass-card-inner flex items-start justify-between gap-3 p-3.5 text-left text-[13.5px] font-medium"
               style={{
-                opacity: dimmed ? 0.4 : 1,
-                borderColor: isChosen ? "var(--accent)" : "transparent",
+                opacity: dimmed ? 0.48 : 1,
+                borderColor: isChosen ? "var(--accent)" : locked ? "rgba(248,113,113,0.42)" : "transparent",
                 borderWidth: 1.5,
                 borderStyle: "solid",
               }}
             >
-              <span>{o.label}</span>
+              <span className="flex flex-col gap-1">
+                <span>{o.label}</span>
+                {(locked || isLastResort || risky) && (
+                  <span className="flex flex-wrap gap-1.5">
+                    {locked && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(248,113,113,0.12)", color: "var(--error)" }}>
+                        Zu teuer — braucht {formatMoney(cost)}
+                      </span>
+                    )}
+                    {isLastResort && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(255,94,0,0.12)", color: "var(--accent)" }}>
+                        Letzter Ausweg
+                      </span>
+                    )}
+                    {risky && !locked && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(245,158,11,0.14)", color: "#f59e0b" }}>
+                        Riskant
+                      </span>
+                    )}
+                  </span>
+                )}
+              </span>
               {isChosen && <Check size={16} style={{ color: "var(--accent)" }} />}
             </button>
           );

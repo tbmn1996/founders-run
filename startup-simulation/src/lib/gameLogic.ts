@@ -6,11 +6,13 @@
 
 import {
   ALLOCATION,
+  CASH_BANDS,
   FOUNDER_TYPES,
   INITIAL_STATS,
   LUCK_EVENTS,
   PHASES,
   SCENARIOS,
+  type CashBandKey,
   type EventCategory,
   type FounderType,
   type LuckEvent,
@@ -109,12 +111,26 @@ export function applyAllocation(stats: Stats, amounts: number[]): Stats {
   return next;
 }
 
+export function cashBand(cash: number): CashBandKey {
+  if (cash >= CASH_BANDS.solid.min) return "solid";
+  if (cash >= CASH_BANDS.strained.min) return "strained";
+  return "critical";
+}
+
+export function isOptionLocked(option: Option, cash: number): boolean {
+  const cashEffect = option.effects.cash ?? 0;
+  return cashEffect < 0 && -cashEffect > cash;
+}
+
 /**
  * Formatiert einen Geld-Betrag nach deutschem Stil.
- * Entspricht money() im HTML-Prototyp: "€" + Math.round(|v|).toLocaleString("de-DE")
+ * Negative Beträge behalten ihr Vorzeichen: "−€8.000".
  */
 export function formatMoney(v: number): string {
-  return "€" + Math.round(Math.abs(v)).toLocaleString("de-DE");
+  const rounded = Math.round(v);
+  const sign = rounded < 0 ? "−" : "";
+  const amount = rounded < 0 ? -rounded : rounded;
+  return `${sign}€${amount.toLocaleString("de-DE")}`;
 }
 
 /**
@@ -144,6 +160,7 @@ export type CompletedStep =
 
 export interface DerivedRunState {
   stats: Stats;
+  cashRaw: number;
   points: number;
   records: DecisionRecord[];
 }
@@ -155,11 +172,13 @@ export interface DerivedRunState {
  */
 export function deriveRunState(completed: CompletedStep[]): DerivedRunState {
   let stats: Stats = { ...INITIAL_STATS };
+  let cashRaw = INITIAL_STATS.cash;
   let points = 0;
   const records: DecisionRecord[] = [];
 
   completed.forEach((step) => {
     if (step.kind === "decision") {
+      cashRaw += step.chosen.effects.cash ?? 0;
       stats = applyEffects(stats, step.chosen.effects);
       points += step.chosen.points;
       records.push({
@@ -171,16 +190,18 @@ export function deriveRunState(completed: CompletedStep[]): DerivedRunState {
     }
 
     if (step.kind === "event") {
+      cashRaw += step.event.effects.cash ?? 0;
       stats = applyEffects(stats, step.event.effects);
       return;
     }
 
     const spent = step.amounts.reduce((sum, amount) => sum + amount, 0);
+    cashRaw -= spent;
     stats = applyAllocation(stats, step.amounts);
     if (spent > 0) points += ALLOCATION.bonusPoints;
   });
 
-  return { stats, points, records };
+  return { stats, cashRaw, points, records };
 }
 
 export { INITIAL_STATS, PHASES };

@@ -25,7 +25,7 @@
 
 | # | Session | Gate nach Abschluss | Status | Commit |
 |---|---|---|---|---|
-| S1 | Cash-Sichtbarkeit (Bänder, Gating, Fixes) | A — deploybarer Zwischenstand | ☐ offen | — |
+| S1 | Cash-Sichtbarkeit (Bänder, Gating, Fixes) | A — deploybarer Zwischenstand | ☑ abgeschlossen | e9736df |
 | S2 | Deterministischer Unterbau (Seed + Slots) | — (unsichtbares Refactoring) | ☐ offen | — |
 | S3 | Krise & Beinahe-Pleite | B — deploybarer Zwischenstand | ☐ offen | — |
 | S4 | Gedächtnis: Marker + Echo + P5 (Herzstück) | C — Kern-Produktziel erreicht | ☐ offen | — |

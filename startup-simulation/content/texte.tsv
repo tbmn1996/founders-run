@@ -1,0 +1,18 @@
+bereich	schluessel	wert
+intro	startup	Mira
+intro	oneLiner	Die KI-Assistentin für Service- und Vertriebsteams
+intro	pitch	Ihr gründet «Mira» — eine KI-Assistentin, die Service- und Vertriebsteams in Unternehmen entlastet: Mails beantworten, Angebote erstellen, Kundenkommunikation automatisieren. B2B-SaaS heißt: Software-Abo für Unternehmen; abgerechnet wird pro Nutzerplatz und skaliert mit jedem neuen Team. Du gründest das Startup dahinter.
+intro	bedingung1	Team: du + 1 unentschlossene:r Mitgründer:in
+intro	bedingung2	Startkapital: €20.000 (Erspartes & Family-and-Friends)
+intro	bedingung3	Markt: tausende Unternehmen im Mittelstand, KI ist gerade DAS Thema
+intro	bedingung4	Wettbewerb: große Tech-Konzerne bauen Ähnliches
+phase1	name	Die Idee
+phase1	intro	Aus einer Idee wird ein Plan. Erste Weichen stellen.
+phase2	name	Das Produkt
+phase2	intro	Vom Konzept zum ersten testbaren Produkt (MVP, Minimalversion zum Lernen).
+phase3	name	Die Finanzierung
+phase3	intro	Geld bewegt — aber zu welchem Preis?
+phase4	name	Das Wachstum
+phase4	intro	Aus einem Pilot wird ein Unternehmen.
+phase5	name	Die Bewährungsprobe
+phase5	intro	Jedes Startup wird einmal richtig getestet.

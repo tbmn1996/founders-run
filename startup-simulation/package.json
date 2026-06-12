@@ -4,9 +4,13 @@
   "private": true,
   "description": "Startup-Simulation für den Venture Club Münster (Founders Map · Playground/Gamification)",
   "scripts": {
+    "generate": "node scripts/generate-content.mjs",
+    "predev": "npm run generate",
     "dev": "next dev",
+    "prebuild": "npm run generate",
     "build": "next build",
     "start": "next start",
+    "prelint": "npm run generate",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

@@ -2,3 +2,9 @@
 
 # TypeScript-Build-Cache (wird bei jedem tsc-Lauf neu geschrieben)
 tsconfig.tsbuildinfo
+
+# Generierte Spielinhalte — werden von scripts/generate-content.mjs erzeugt
+src/lib/gameContent.generated.ts
+
+# Einmal-Migrations-Snapshot (lokal, nicht committen)
+scripts/.content-snapshot.json

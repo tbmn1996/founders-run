@@ -18,6 +18,7 @@ import {
 import StatBar from "@/components/StatBar";
 import {
   ALLOCATION,
+  ALLOC_MARKERS,
   PHASES,
   SCENARIO_INTRO,
   STAT_META,
@@ -32,6 +33,7 @@ import {
 import {
   computeAllocationPot,
   computeScore,
+  deriveAllocFocus,
   deriveSlots,
   deriveRunState,
   determineFounderType,
@@ -40,6 +42,7 @@ import {
   resolveStep,
   type CompletedStep,
   type DecisionRecord,
+  type DerivedRunState,
   type Step,
 } from "@/lib/gameLogic";
 
@@ -238,7 +241,7 @@ export default function Game() {
   /** Temporäre Wahl — steuert Feedback-Panel, wird erst beim Weiterklicken committet. */
   const [chosen, setChosen] = useState<Option | null>(null);
 
-  const { stats, cashRaw, points, records } = useMemo(
+  const { stats, cashRaw, points, records, allocation } = useMemo(
     () => deriveRunState(completed),
     [completed]
   );
@@ -287,8 +290,9 @@ export default function Game() {
   }
 
   /**
-   * Callback für AllocationCard: nimmt Betrags-Array entgegen,
-   * wendet es auf Stats an und fügt Bonus-Punkte hinzu.
+   * Callback für AllocationCard: nimmt Betrags-Array entgegen und wendet
+   * es auf die History an. Marker und Recap-Daten werden deterministisch
+   * aus der History abgeleitet (kein manueller Bonus mehr seit S5).
    */
   function finishAlloc(amounts: number[]) {
     const nextCompleted = [...completed, { kind: "alloc" as const, amounts }];
@@ -346,6 +350,7 @@ export default function Game() {
             stats={stats}
             points={points}
             records={records}
+            allocation={allocation}
             onRestart={startGame}
             onBack={goBack}
           />
@@ -849,21 +854,31 @@ function AllocationCard({
         <div className="mt-4">
           <EffectChips effects={gains} />
         </div>
-        {/* Bonus-Punkte Badge */}
-        <div className="mt-4 flex items-center gap-2">
-          <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums"
-            style={{
-              background: "rgba(74,222,128,0.12)",
-              color: "var(--success)",
-            }}
-          >
-            +{ALLOCATION.bonusPoints} Punkte
-          </span>
-          <span className="text-[11px]" style={{ color: "var(--muted)" }}>
-            für vollständige Investition
-          </span>
-        </div>
+        {/* Rücklage positiv framen (S5: statt +12-Badge) */}
+        {remaining > 0 && (
+          <p className="mt-3 text-[12px] leading-relaxed" style={{ color: "var(--muted)" }}>
+            {formatMoney(remaining)} bleiben als Rücklage in der Kasse.
+          </p>
+        )}
+        {/* Schwerpunkt-Hinweis beim Bestätigen (§9.5): nutzt dieselbe Dominanz-
+            formel wie die Marker-Logik (deriveAllocFocus), damit UI-Hinweis und
+            gesetzter Marker nie auseinanderlaufen. Kein Ausgangs-Spoiler. */}
+        {(() => {
+          const fokus = deriveAllocFocus(amounts);
+          if (!fokus) return null;
+          const bucketIdx = ALLOC_MARKERS.bucketMarkers.indexOf(
+            fokus as (typeof ALLOC_MARKERS.bucketMarkers)[number]
+          );
+          const label =
+            bucketIdx >= 0
+              ? `Starker Fokus: ${ALLOCATION.buckets[bucketIdx]!.label}`
+              : "Ausgewogen investiert";
+          return (
+            <p className="mt-2 text-[12px] font-medium" style={{ color: "var(--accent)" }}>
+              {label} — mal sehen, was das nach sich zieht.
+            </p>
+          );
+        })()}
         <button
           onClick={() => onFinish(amounts)}
           className="btn btn-primary mt-6 flex items-center justify-center gap-2 py-3 text-[14px]"
@@ -945,25 +960,25 @@ function AllocationCard({
         ))}
       </div>
 
-      {/* „Noch zu verteilen"-Anzeige */}
+      {/* Rücklage-Anzeige (S5: positiv geframt — kein Vollausgabe-Zwang mehr) */}
       <div className="mt-4 flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--surface-3)" }}>
-        <span className="section-label">Noch zu verteilen</span>
+        <span className="section-label">
+          {remaining > 0 ? "Rücklage in der Kasse" : "Vollständig investiert"}
+        </span>
         <span
           className="text-[15px] font-bold tabular-nums"
-          style={{ color: remaining === 0 ? "var(--success)" : "var(--accent)" }}
+          style={{ color: "var(--success)" }}
         >
           {formatMoney(remaining)}
         </span>
       </div>
 
-      {/* Bestätigen-Button: disabled solange remaining ≠ 0 */}
+      {/* Bestätigen-Button: ab S5 bei beliebiger Verteilung (auch 0 €) erlaubt */}
       <button
         onClick={() => setConfirmed(true)}
-        disabled={remaining !== 0}
         className="btn btn-primary mt-4 flex w-full items-center justify-center gap-2 py-3 text-[14px]"
-        style={{ opacity: remaining !== 0 ? 0.5 : 1 }}
       >
-        {remaining !== 0 ? "Verteile dein ganzes Geld" : "Investieren →"}
+        Investieren →
       </button>
     </motion.div>
   );
@@ -974,10 +989,9 @@ function AllocationCard({
 // ---------------------------------------------------------------------------
 
 /**
- * Ergebnis-Screen: Founder-Typ, Score (inkl. Alloc-Bonus), Werte, Rückblick.
- * Alloc-Runde taucht im Rückblick NICHT auf (nur DecisionRecords),
- * aber die +12 Bonus-Punkte sind im points-State enthalten und fließen
- * über computeScore in den angezeigten Score ein.
+ * Ergebnis-Screen: Founder-Typ, Score, Werte, Rückblick.
+ * Ab S5: kein +12-Pauschalbonus mehr; Alloc-Runde erscheint als
+ * eigene Zeile im Rückblick (Verteilung + Rücklage).
  *
  * Enthält:
  * - VCM-Logo (/logos/vcm.png) unter dem Founder-Typ-Emoji
@@ -989,12 +1003,15 @@ function Result({
   stats,
   points,
   records,
+  allocation,
   onRestart,
   onBack,
 }: {
   stats: Stats;
   points: number;
   records: DecisionRecord[];
+  /** Allokations-Daten für die Recap-Zeile (S5). */
+  allocation: DerivedRunState["allocation"];
   onRestart: () => void;
   onBack: () => void;
 }) {
@@ -1118,12 +1135,16 @@ function Result({
         </div>
       </div>
 
-      {/* Rückblick — nur Entscheidungsrunden, keine Alloc-Runde */}
+      {/* Rückblick — Entscheidungsrunden + Alloc-Zeile (S5) */}
       <div className="flex flex-col gap-2">
         <span className="section-label px-1">Deine Entscheidungen im Rückblick</span>
         {records.map((rec, i) => (
           <RecapItem key={`${rec.kind}-${rec.scenario.id}`} rec={rec} index={i} />
         ))}
+        {/* Alloc-Recap-Zeile: zeigt Verteilung + Rücklage (nur wenn Alloc abgeschlossen) */}
+        {allocation && (
+          <AllocRecapItem allocation={allocation} />
+        )}
       </div>
 
       <button
@@ -1233,6 +1254,61 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AllocRecapItem — Alloc-Zeile im Rückblick (S5: Budget-Wette)
+// ---------------------------------------------------------------------------
+
+/**
+ * Einfache, nicht aufklappbare Karte, die die Investitionsverteilung
+ * und die Rücklage im Rückblick zeigt.
+ */
+function AllocRecapItem({ allocation }: { allocation: NonNullable<DerivedRunState["allocation"]> }) {
+  const { amounts, spent, reserve } = allocation;
+  return (
+    <div className="glass-card p-3.5">
+      <span
+        className="text-[10px] font-semibold uppercase tracking-wide"
+        style={{ color: "var(--muted)" }}
+      >
+        Investitionsrunde · Budget-Einsatz
+      </span>
+      <div className="mt-1.5 flex flex-col gap-1">
+        {ALLOCATION.buckets.map((bucket, i) => {
+          const amt = amounts[i] ?? 0;
+          if (amt === 0) return null;
+          return (
+            <div key={bucket.stat} className="flex items-center justify-between text-[12px]">
+              <span>
+                <span className="mr-1">{bucket.emoji}</span>
+                {bucket.label}
+              </span>
+              <span className="tabular-nums font-semibold" style={{ color: "var(--accent)" }}>
+                {formatMoney(amt)}
+              </span>
+            </div>
+          );
+        })}
+        {spent === 0 && (
+          <p className="text-[12px]" style={{ color: "var(--muted)" }}>
+            Gesamtes Budget als Rücklage behalten.
+          </p>
+        )}
+      </div>
+      {/* Zusammenfassung */}
+      <div className="mt-2 flex items-center justify-between border-t pt-2 text-[11.5px]" style={{ borderColor: "var(--surface-3)" }}>
+        <span style={{ color: "var(--muted)" }}>
+          {spent > 0 ? `${formatMoney(spent)} investiert` : "Nichts investiert"}
+        </span>
+        {reserve > 0 && (
+          <span className="font-semibold" style={{ color: "var(--success)" }}>
+            {formatMoney(reserve)} Rücklage
+          </span>
+        )}
+      </div>
     </div>
   );
 }

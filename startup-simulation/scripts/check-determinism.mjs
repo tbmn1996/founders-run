@@ -38,8 +38,8 @@ const require = createRequire(import.meta.url);
 const logic = require(path.join(tmpDir, "gameLogic.js"));
 const data = require(path.join(tmpDir, "gameData.js"));
 
-const { deriveSlots, deriveMarkers, resolveStep, deriveRunState } = logic;
-const { SCENARIOS, LUCK_EVENTS } = data;
+const { deriveSlots, deriveMarkers, deriveAllocFocus, resolveStep, deriveRunState, computeAllocationPot } = logic;
+const { SCENARIOS, LUCK_EVENTS, ALLOCATION } = data;
 
 let fehler = 0;
 function check(name, ok, detail = "") {
@@ -188,6 +188,66 @@ const NORMAL_IDS = ["p1", "verein", "p2", "p3", "alloc", "p4", "markt", "p5"];
     ohneKonsument.every((m) => erlaubtOhne.has(m)),
     `ohne Konsument: ${ohneKonsument.join(", ")}`
   );
+}
+
+// --- 8. S5 Budget-Wette: Dominanzformel, cash:discipline, +12 entfernt ---
+{
+  // Tabellentest der Dominanzformel (PLAN §8.8)
+  const faelle = [
+    { amounts: [9000, 3000, 0, 0], erwartet: "fokus:produkt" },      // 75 % ≥ 40 %, Abstand 6000
+    { amounts: [4000, 4000, 4000, 4000], erwartet: "fokus:balanced" }, // keine Dominanz
+    { amounts: [5500, 3500, 2000, 1000], erwartet: "fokus:balanced" }, // top < 6000
+    { amounts: [0, 0, 0, 0], erwartet: null },                        // nichts investiert
+    { amounts: [0, 7000, 4000, 0], erwartet: "fokus:marketing" },     // growth-Bucket dominant
+    { amounts: [6000, 6000, 3000, 0], erwartet: "fokus:balanced" },   // Gleichstand oben → kein Abstand
+    { amounts: [0, 0, 5000, 0], erwartet: null },                     // spent < 6000
+  ];
+  const ok = faelle.every(
+    ({ amounts, erwartet }) => deriveAllocFocus(amounts) === erwartet
+  );
+  check("S5: Dominanzformel-Tabellentest (7 Fälle)", ok);
+
+  // cash:discipline über deriveMarkers mit echter History:
+  // Start-Cash 20000, p1-target c (Effekte einrechnen), dann alloc.
+  const basis = [decision("p1-target", "c")];
+  const cashVorAlloc = deriveRunState(basis).cashRaw;
+  const pot = computeAllocationPot(cashVorAlloc);
+  const sparsam = Math.floor((0.4 * pot) / 500) * 500; // knapp unter 40 % des Pots
+  const mitSparsamerAlloc = [...basis, { kind: "alloc", amounts: [sparsam, 0, 0, 0] }];
+  const nachher = deriveRunState(mitSparsamerAlloc).cashRaw;
+  const marker = deriveMarkers(mitSparsamerAlloc);
+  const sollDiscipline = sparsam <= 0.4 * pot && nachher >= 10000;
+  check(
+    "S5: cash:discipline feuert konsistent zur Formel",
+    marker.includes("cash:discipline") === sollDiscipline
+  );
+
+  // Voll investiert → kein cash:discipline
+  const mitVollerAlloc = [...basis, { kind: "alloc", amounts: [pot, 0, 0, 0] }];
+  const markerVoll = deriveMarkers(mitVollerAlloc);
+  check("S5: Vollinvestition setzt kein cash:discipline", !markerVoll.includes("cash:discipline"));
+
+  // +12-Pauschalbonus vollständig entfernt
+  check("S5: ALLOCATION.bonusPoints existiert nicht mehr", ALLOCATION.bonusPoints === undefined);
+  const punkteOhneBonus = deriveRunState(mitVollerAlloc).points;
+  const punkteNurBasis = deriveRunState(basis).points;
+  check("S5: Alloc-Step vergibt keine Pauschalpunkte", punkteOhneBonus === punkteNurBasis);
+
+  // Alloc-Echo: fokus-Marker → markergebundenes Markt-Event wählbar
+  const dominantAlloc = [...basis, { kind: "alloc", amounts: [0, Math.min(pot, 9000), 0, 0] }];
+  const dominantMarker = deriveMarkers(dominantAlloc);
+  if (dominantMarker.includes("fokus:marketing")) {
+    const marktSlot = { id: "markt", kind: "event", category: "markt" };
+    let alle = true;
+    for (let seed = 1; seed <= 100; seed += 1) {
+      const ev = resolveStep(seed, marktSlot, dominantAlloc).event;
+      if (!ev.requiresMarker) alle = false;
+    }
+    check("S5: fokus:marketing → Echo-Event im markt-Slot (100 Seeds)", alle);
+  } else {
+    check("S5: fokus:marketing wird bei dominanter Marketing-Alloc gesetzt", false,
+      `Marker waren: ${dominantMarker.join(", ")}`);
+  }
 }
 
 // --- Aufräumen + Ergebnis ---

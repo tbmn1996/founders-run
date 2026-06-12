@@ -6,6 +6,7 @@
 
 import {
   ALLOCATION,
+  ALLOC_MARKERS,
   CASH_BANDS,
   CRISIS,
   FOUNDER_TYPES,
@@ -118,12 +119,62 @@ export function deriveSlots(completed: CompletedStep[]): Slot[] {
   return NORMAL_SLOTS;
 }
 
+/**
+ * Fokus-Marker aus einer Bucket-Verteilung ableiten (PLAN §8.8).
+ * Single Source of Truth für Logik UND UI (Schwerpunkt-Hinweis in der
+ * AllocationCard) — Schwellen zentral in ALLOC_MARKERS (gameData.ts).
+ *
+ * Dominanz: höchster Bucket ≥ minTop UND ≥ minShare des Ausgegebenen
+ *           UND Abstand zum zweithöchsten ≥ minGap → fokus:<bucket>.
+ * Sonst bei spent ≥ minSpentForFocus → fokus:balanced.
+ * Bei kleinerer/keiner Investition → null (kein fokus-Marker).
+ */
+export function deriveAllocFocus(amounts: number[]): string | null {
+  const spent = amounts.reduce((s, a) => s + a, 0);
+  if (spent < ALLOC_MARKERS.minSpentForFocus) return null;
+
+  const sorted = [...amounts]
+    .map((amt, i) => ({ amt, i }))
+    .sort((a, b) => b.amt - a.amt);
+  const top = sorted[0]!;
+  const second = sorted[1]!;
+  const { minTop, minShare, minGap } = ALLOC_MARKERS.dominance;
+  const isDominant =
+    top.amt >= minTop &&
+    top.amt >= minShare * spent &&
+    top.amt - second.amt >= minGap;
+
+  // Bucket-Reihenfolge entspricht ALLOCATION.buckets (siehe ALLOC_MARKERS).
+  return isDominant ? ALLOC_MARKERS.bucketMarkers[top.i]! : ALLOC_MARKERS.balancedMarker;
+}
+
 export function deriveMarkers(completed: CompletedStep[]): string[] {
   const markers = new Set<string>();
 
-  completed.forEach((step) => {
+  completed.forEach((step, index) => {
+    // Marker aus Entscheidungs-Antworten übernehmen
     if ((step.kind === "decision" || step.kind === "crisis") && step.chosen.setsMarker) {
       markers.add(step.chosen.setsMarker);
+    }
+
+    // Alloc-Marker ableiten — aus der Verteil-Runde (S5, Budget-Wette)
+    if (step.kind === "alloc") {
+      const spent = step.amounts.reduce((s, a) => s + a, 0);
+
+      // Fokus-Marker (Dominanzformel — gemeinsame Quelle mit der UI)
+      const fokus = deriveAllocFocus(step.amounts);
+      if (fokus) markers.add(fokus);
+
+      // cash:discipline: spent ≤ maxSpentShare × Pot UND Cash danach ≥ minCashAfter.
+      // Pot/Cash über die puren Ableitungen holen (deriveRunState ruft
+      // deriveMarkers nicht auf — keine Zirkularität).
+      const stateBefore = deriveRunState(completed.slice(0, index));
+      const pot = computeAllocationPot(stateBefore.cashRaw);
+      const stateAfter = deriveRunState(completed.slice(0, index + 1));
+      const { maxSpentShare, minCashAfter } = ALLOC_MARKERS.discipline;
+      if (spent <= maxSpentShare * pot && stateAfter.cashRaw >= minCashAfter) {
+        markers.add(ALLOC_MARKERS.disciplineMarker);
+      }
     }
   });
 
@@ -307,6 +358,15 @@ export interface DerivedRunState {
   cashRaw: number;
   points: number;
   records: DecisionRecord[];
+  /** Allokations-Daten für den Rückblick. Nur gesetzt, wenn die Verteil-Runde abgeschlossen wurde. */
+  allocation?: {
+    /** Investierter Betrag je Bucket in Euro. */
+    amounts: number[];
+    /** Summe aller investierten Beträge. */
+    spent: number;
+    /** Nicht investierter Rest (Rücklage). */
+    reserve: number;
+  };
 }
 
 /**
@@ -319,6 +379,8 @@ export function deriveRunState(completed: CompletedStep[]): DerivedRunState {
   let cashRaw = INITIAL_STATS.cash;
   let points = 0;
   const records: DecisionRecord[] = [];
+  // Alloc-Daten für den Recap — werden befüllt, sobald der alloc-Step verarbeitet wird
+  let allocData: DerivedRunState["allocation"] = undefined;
 
   completed.forEach((step) => {
     if (step.kind === "decision" || step.kind === "crisis") {
@@ -340,13 +402,17 @@ export function deriveRunState(completed: CompletedStep[]): DerivedRunState {
       return;
     }
 
+    // Alloc-Schritt: Investitionen aus Buckets anwenden, kein Pauschalbonus mehr (S5)
     const spent = step.amounts.reduce((sum, amount) => sum + amount, 0);
+    // Pot aus aktuellem cashRaw berechnen (vor dem Abzug)
+    const pot = computeAllocationPot(cashRaw);
     cashRaw -= spent;
     stats = applyAllocation(stats, step.amounts);
-    if (spent > 0) points += ALLOCATION.bonusPoints;
+    // Alloc-Daten für Rückblick merken (wird am Ende gesetzt)
+    allocData = { amounts: step.amounts, spent, reserve: pot - spent };
   });
 
-  return { stats, cashRaw, points, records };
+  return { stats, cashRaw, points, records, allocation: allocData };
 }
 
 export { INITIAL_STATS, PHASES };

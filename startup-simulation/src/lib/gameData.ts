@@ -138,8 +138,8 @@ export const ALLOCATION = {
   step: 500,
   /** Stat-Punkte je €3.000, die in einen Bucket fließen. */
   gainPer3000: 4,
-  /** Feste Bonus-Punkte fürs Abschließen der Verteil-Runde. */
-  bonusPoints: 12,
+  // bonusPoints wurde mit S5 (Budget-Wette) ersatzlos entfernt.
+  // Der Pauschalbonus wurde durch markerbasierte Echo-Events ersetzt.
   buckets: [
     { label: "Bessere KI & Produkt",         stat: "innovation" as StatKey, emoji: "💡" },
     { label: "Werbung & Reichweite",          stat: "growth"     as StatKey, emoji: "📣" },
@@ -147,6 +147,23 @@ export const ALLOCATION = {
     { label: "Verantwortung & Datenschutz",   stat: "impact"     as StatKey, emoji: "🛡️" },
   ] as AllocationBucket[],
 };
+
+// ---------------------------------------------------------------------------
+// Alloc-Marker-Schwellen (S5, Budget-Wette). Werte aus PLAN §8.8 —
+// zentral hier, damit Logik und UI dieselbe Quelle nutzen.
+// ---------------------------------------------------------------------------
+export const ALLOC_MARKERS = {
+  /** Dominanz: höchster Bucket ≥ minTop € UND ≥ minShare des Ausgegebenen UND Abstand zum zweithöchsten ≥ minGap €. */
+  dominance: { minTop: 6000, minShare: 0.4, minGap: 2000 },
+  /** Erst ab dieser Investitionssumme wird überhaupt ein fokus-Marker gesetzt. */
+  minSpentForFocus: 6000,
+  /** cash:discipline: spent ≤ maxSpentShare × Pot UND Cash nach der Runde ≥ minCashAfter €. */
+  discipline: { maxSpentShare: 0.4, minCashAfter: 10000 },
+  /** Marker-IDs je Bucket — Reihenfolge entspricht ALLOCATION.buckets. */
+  bucketMarkers: ["fokus:produkt", "fokus:marketing", "fokus:community", "fokus:datenschutz"],
+  balancedMarker: "fokus:balanced",
+  disciplineMarker: "cash:discipline",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Spielinhalte werden aus der generierten Datei re-exportiert.

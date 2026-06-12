@@ -26,6 +26,17 @@ npx vercel --prod  # Deploy via Vercel (aus startup-simulation/; einmalig vorher
 
 Es gibt keine konfigurierten Tests.
 
+## Verifikation (nach Änderungen Pflicht)
+
+Aus `startup-simulation/` ausführen:
+
+```bash
+npx tsc --noEmit   # TypeScript-Fehler → muss 0 ergeben
+npm run build      # Produktions-Build → muss fehlerfrei durchlaufen
+```
+
+Beides muss grün sein, bevor Änderungen als fertig gelten. Der Build läuft automatisch das Content-Generator-Skript — ein ungültiges TSV bricht den Build ab.
+
 ## Architektur
 
 Stack: **Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · framer-motion · lucide-react**. Die gesamte App ist eine einzige Client-Seite, kein Backend, keine Persistenz — die Sim speichert bewusst nichts (Scoreboard lebt in der Messe-App).
@@ -66,3 +77,31 @@ Strikte Trennung von Inhalt, Logik und Ablauf:
 - **`docs/`** — `KONZEPT - Startup Simulation.md` (fachliches Konzept; §12 listet die offenen Entscheidungen), `DESIGN_SYSTEM.md`, `FOUNDERS MAP Konzept - Gründungsreise.md`, Planungs-DOCX.
 - **`assets/Logo SC/`** — Logos (1.png = Startup Contacts, 3.png = Venture Club Münster; beide dunkler Hintergrund).
 - **`archiv/`** — Transkripte der ursprünglichen Konzept-Session (Referenz, nicht bearbeiten).
+
+## Bekannte Stolperfallen
+
+- **`gameContent.generated.ts` nie direkt editieren** — wird von `scripts/generate-content.mjs` überschrieben. Inhalte ausschließlich in `content/*.tsv` ändern.
+- **Pot-Berechnung zur Laufzeit, nicht beim Build:** `computeAllocationPot()` wird erst beim Mount der `AllocationCard` aufgerufen (Cash-Stand nach Phase 3 zählt). Nicht in `buildTimeline()` vorausberechnen.
+- **Kein globaler State:** Die gesamte App läuft als lokale State-Machine in `page.tsx`. Kein Zustand wird persistiert — bei jedem Reload startet das Spiel neu.
+- **`navigator.share` ist Pflicht** für den Teilen-Button auf dem Ergebnis-Screen. Vor Deployment prüfen, dass die API vorhanden und eingebunden ist.
+- **Keine alten API-Referenzen:** Beim Refactoring darauf achten, dass veraltete Feldnamen (z. B. frühere Scoring-Hilfsfunktionen) vollständig entfernt werden — `npx tsc --noEmit` fängt das ab.
+
+## Token-Disziplin (Agent-Hinweis)
+
+Vollständige Regeln stehen in `Scripts/CLAUDE.md §3`. Kurzfassung für dieses Projekt:
+
+- Befehle mit langer Ausgabe (Build-Log, `grep` auf `src/`) über `ctx_batch_execute` statt `Bash` laufen lassen.
+- `gameContent.generated.ts` ist groß und auto-generiert — bei Bedarf `ctx_execute_file` statt `Read`.
+- Codex-Sessions und Claude-Sessions nicht in einer Riesensession stapeln; nach abgeschlossener Teilaufgabe `/clear`.
+
+## graphify
+
+Dieser Wissens-Graph liegt unter `startup-simulation/src/graphify-out/` (55 Nodes, 100 Edges, 9 Communities). God Nodes: `formatMoney`, `Stats`, `buildTimeline`, `AllocationCard`, `Result`.
+
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+
+Regeln:
+- Für Codebase-Fragen zuerst `graphify query "<frage>"` ausführen, wenn `startup-simulation/src/graphify-out/graph.json` existiert. `graphify path "<A>" "<B>"` für Abhängigkeiten, `graphify explain "<konzept>"` für fokussierte Konzepte.
+- `graphify-out/` darf nach Hooks oder inkrementellen Updates dirty sein — kein Grund, Graphify zu überspringen.
+- `startup-simulation/src/graphify-out/GRAPH_REPORT.md` nur für breite Architektur-Reviews lesen.
+- Nach Code-Änderungen Graph aktualisieren (kein API-Aufruf, nur AST): `graphify update startup-simulation/src`

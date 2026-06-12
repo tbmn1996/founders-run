@@ -8,3 +8,6 @@ src/lib/gameContent.generated.ts
 
 # Einmal-Migrations-Snapshot (lokal, nicht committen)
 scripts/.content-snapshot.json
+
+# Graphify Wissens-Graph (lokal, wird per `graphify update startup-simulation/src` neu generiert)
+src/graphify-out/

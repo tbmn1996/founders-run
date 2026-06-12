@@ -57,6 +57,10 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
   return a;
 }
 
+function sortById<T extends { id: string }>(pool: T[]): T[] {
+  return [...pool].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
 export type Slot =
   | { id: "p1" | "p2" | "p3" | "p4" | "p5"; kind: "decision"; phase: number }
   | { id: "verein" | "markt"; kind: "event"; category: EventCategory }
@@ -114,6 +118,18 @@ export function deriveSlots(completed: CompletedStep[]): Slot[] {
   return NORMAL_SLOTS;
 }
 
+export function deriveMarkers(completed: CompletedStep[]): string[] {
+  const markers = new Set<string>();
+
+  completed.forEach((step) => {
+    if ((step.kind === "decision" || step.kind === "crisis") && step.chosen.setsMarker) {
+      markers.add(step.chosen.setsMarker);
+    }
+  });
+
+  return Array.from(markers).sort();
+}
+
 function pickBySeed<T>(pool: T[], runSeed: number, key: string): T {
   if (pool.length === 0) {
     throw new Error(`Kein Inhalt für Slot-Key "${key}" gefunden.`);
@@ -122,7 +138,7 @@ function pickBySeed<T>(pool: T[], runSeed: number, key: string): T {
   return pool[Math.floor(rng() * pool.length)];
 }
 
-export function resolveStep(runSeed: number, slot: Slot): Step {
+export function resolveStep(runSeed: number, slot: Slot, completed: CompletedStep[] = []): Step {
   if (slot.kind === "alloc") {
     return { kind: "alloc" };
   }
@@ -138,14 +154,43 @@ export function resolveStep(runSeed: number, slot: Slot): Step {
   }
 
   if (slot.kind === "event") {
-    const pool = LUCK_EVENTS.filter((e) => e.category === slot.category);
+    const markers = new Set(deriveMarkers(completed));
+    const normalPool = LUCK_EVENTS.filter((e) => e.category === slot.category && !e.requiresMarker);
+    let pool = normalPool;
+
+    if (slot.id === "markt" && markers.size > 0) {
+      const echoPool = sortById(
+        LUCK_EVENTS.filter(
+          (e) => e.category === "markt" && e.requiresMarker && markers.has(e.requiresMarker)
+        )
+      );
+      // T4.2 hat genau einen markt-Slot; dadurch kann maximal ein markergebundenes Echo pro Run erscheinen.
+      pool = echoPool.length > 0 ? echoPool : sortById(normalPool);
+    }
+
     return {
       kind: "event",
       event: pickBySeed(pool, runSeed, `${slot.id}:event`),
     };
   }
 
-  const pool = SCENARIOS.filter((s) => s.phase === slot.phase);
+  let pool = SCENARIOS.filter((s) => s.phase === slot.phase);
+
+  if (slot.id === "p5") {
+    const markers = new Set(deriveMarkers(completed));
+    const priorityPool = markers.size > 0
+      ? sortById(
+          SCENARIOS.filter(
+            (s) => s.phase === 5 && s.requiresMarker && markers.has(s.requiresMarker)
+          )
+        )
+      : [];
+    const fallbackPool = markers.size > 0
+      ? sortById(SCENARIOS.filter((s) => s.phase === 5 && !s.requiresMarker))
+      : SCENARIOS.filter((s) => s.phase === 5 && !s.requiresMarker);
+    pool = priorityPool.length > 0 ? priorityPool : fallbackPool;
+  }
+
   const scenario = pickBySeed(pool, runSeed, `${slot.id}:pick`);
   const optionsRng = mulberry32(hashSlot(runSeed, `${slot.id}:options:${scenario.id}`));
   return {

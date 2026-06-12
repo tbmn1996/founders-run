@@ -246,8 +246,8 @@ export default function Game() {
   const slots = useMemo(() => deriveSlots(completed), [completed]);
   const currentSlot = step < slots.length ? slots[step] : undefined;
   const currentStep = useMemo(
-    () => (runSeed === null || !currentSlot ? null : resolveStep(runSeed, currentSlot)),
-    [currentSlot, runSeed]
+    () => (runSeed === null || !currentSlot ? null : resolveStep(runSeed, currentSlot, completed)),
+    [completed, currentSlot, runSeed]
   );
 
   function startGame() {

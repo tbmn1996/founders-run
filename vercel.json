@@ -1,6 +1,5 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd startup-simulation && npm install && npm run build",
-  "outputDirectory": "startup-simulation/.next",
-  "installCommand": "echo 'install via buildCommand'"
+  "buildCommand": "cd startup-simulation && npm install && npm run build && mv .next ../.next",
+  "installCommand": "echo skip"
 }

@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd startup-simulation && npm install && npm run build",
+  "outputDirectory": "startup-simulation/.next",
+  "installCommand": "echo 'install via buildCommand'"
+}

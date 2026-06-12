@@ -8,41 +8,81 @@ Ein Durchlauf dauert ~3 Minuten: Szenario → 5 Runden mit Trade-off-Entscheidun
 (plus 2 Glücks-Events) → Founder-Typ + Punkte → Rückblick mit Alternativen →
 Abschlussfolie für den Verein.
 
-## Starten
+**Live:** https://founders-run-sepia.vercel.app
 
-> Voraussetzung: **Node.js ≥ 20**.
+---
+
+## Mitmachen
+
+Es gibt **zwei Wege**, zum Projekt beizutragen — je nachdem, ob du Code schreiben
+kannst oder nicht:
+
+### Weg 1 — Nur Spielinhalte ändern (kein Code nötig)
+
+Alle Texte, Fragen, Antworten und Events stehen als einfache Tabellen-Dateien in
+`content/`. Du kannst sie direkt im **GitHub-Webeditor** bearbeiten:
+
+1. Öffne die Datei auf github.com (z. B. `content/fragen.tsv`).
+2. Klicke auf das **Stift-Symbol** (Edit this file).
+3. Ändere den Inhalt.
+4. Scrolle nach unten, schreibe eine kurze Beschreibung, klicke **Commit changes**.
+5. Fertig — Vercel deployt automatisch nach wenigen Minuten.
+
+Die genaue Anleitung zu Spalten, Regeln und Fehlern: **`content/README.md`**.
+
+### Weg 2 — Code weiterentwickeln (lokale Einrichtung)
+
+> Voraussetzung: **Node.js ≥ 20** — Installationsanleitung: https://nodejs.org
 
 ```bash
-cd startup-simulation
+# 1. Repo klonen (einmalig)
+git clone https://github.com/tbmn1996/founders-run.git
+cd founders-run/startup-simulation
+
+# 2. Abhängigkeiten installieren (einmalig, ~30 Sekunden)
 npm install
+
+# 3. Dev-Server starten
 npm run dev      # → http://localhost:3000
-npm run lint     # TypeScript-Check
+                 # Im selben WLAN auch vom Handy erreichbar (Netzwerk-IP)
+
+# 4. Vor dem Pushen: Build und TypeScript prüfen
+npm run build
+npm run lint
 ```
 
-Produktion:
-
-```bash
-npm run build && npm run start
-```
+Keine `.env`-Datei nötig — die App hat kein Backend und keine Secrets.
 
 ## Projektstruktur
 
 ```
+content/              ← Spielinhalte als TSV-Tabellen (kein Code-Wissen nötig)
+│  ├─ fragen.tsv         Entscheidungs-Szenarien (20 Fragen, 5 Phasen)
+│  ├─ antworten.tsv      3 Antworten pro Frage + Effekte auf Säulen
+│  ├─ events.tsv         Glücks-/Markt-Events
+│  ├─ gruendertypen.tsv  5 Gründer-Profile für das Ergebnis
+│  ├─ texte.tsv          Intro-, Phasen- und UI-Texte
+│  └─ README.md          Anleitung für Inhaltspflege
+
+scripts/
+│  └─ generate-content.mjs   Generiert gameContent.generated.ts aus den TSVs
+
 src/
 ├─ app/
-│  ├─ globals.css   # Aura-v2-Design-Tokens (1:1 aus DESIGN_SYSTEM.md)
-│  ├─ layout.tsx    # Dark-Mode, Meta
-│  └─ page.tsx      # Spiel-Ablauf: Intro · Runden · Ergebnis · Rückblick · Closing
+│  ├─ globals.css   Aura-v2-Design-Tokens (Referenz: docs/DESIGN_SYSTEM.md)
+│  ├─ layout.tsx    Dark-Mode, Meta
+│  └─ page.tsx      Spiel-Ablauf: Intro · Runden · Ergebnis · Rückblick · Closing
 ├─ components/
-│  └─ StatBar.tsx   # Werte-Anzeige (Growth/Innovation/Community/Impact/Geld)
+│  └─ StatBar.tsx   Werte-Anzeige (Growth/Innovation/Community/Impact/Geld)
 └─ lib/
-   ├─ gameData.ts   # ALLE Inhalte: Szenario, Fragen, Events, Founder-Typen
-   └─ gameLogic.ts  # Zufallsauswahl, Scoring, Founder-Typ-Berechnung
+   ├─ gameData.ts              Typen, Mechanik-Konstanten; re-exportiert generierte Inhalte
+   ├─ gameLogic.ts             Zufallsauswahl, Scoring, Founder-Typ-Berechnung
+   └─ gameContent.generated.ts Auto-generiert aus TSVs — nie manuell bearbeiten
 ```
 
-**Fragen pflegen:** ausschließlich in `src/lib/gameData.ts`. Pro Phase ≥ 2
-Szenarien im Pool → das Spiel zieht je Durchlauf eines zufällig. Mehr Szenarien
-hinzufügen = mehr Abwechslung, kein Code-Eingriff nötig.
+**Inhalte pflegen:** ausschließlich über `content/*.tsv`. Das Build-Skript läuft
+automatisch vor `dev`, `build` und `lint`. Kaputte Inhalte brechen den Build mit
+einer Fehlermeldung ab und gehen nie live.
 
 ## Integration in die Founders Map
 

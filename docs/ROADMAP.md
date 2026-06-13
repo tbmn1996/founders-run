@@ -28,9 +28,9 @@
 | S1 | Cash-Sichtbarkeit (Bänder, Gating, Fixes) | A — deploybarer Zwischenstand | ☑ abgeschlossen | e9736df |
 | S2 | Deterministischer Unterbau (Seed + Slots) | — (unsichtbares Refactoring) | ☑ abgeschlossen | 530f0b2 |
 | S3 | Krise & Beinahe-Pleite | B — deploybarer Zwischenstand | ☑ abgeschlossen | 7ef3f0e |
-| S4 | Gedächtnis: Marker + Echo + P5 (Herzstück) | C — Kern-Produktziel erreicht | ☐ offen | — |
-| S5 | Budget-Wette (Reserve + Alloc-Marker) | D — Feature-komplett | ☐ offen | — |
-| S6 | Stabilisierung, Sim-Checks, Merge + Deploy | Live auf main | ☐ offen | — |
+| S4 | Gedächtnis: Marker + Echo + P5 (Herzstück) | C — Kern-Produktziel erreicht | ☑ abgeschlossen | 0c927fd / ef718c8 / a5c1844 |
+| S5 | Budget-Wette (Reserve + Alloc-Marker) | D — Feature-komplett | ☑ abgeschlossen | 2a2a6aa |
+| S6 | Stabilisierung, Sim-Checks, Merge + Deploy | Live auf main | ⏳ in Arbeit | — |
 
 ---
 
@@ -132,6 +132,9 @@
 5. Recap: Alloc-Zeile (Verteilung + Rücklage).
 
 **Nicht in dieser Session:** Score-Formel-Änderungen, Rebalancing.
+
+> **Bewusst nicht umgesetzt (Entscheidung Thomas, 2026-06-12):** `vernachlaessigt:datenschutz` aus PLAN §8.8 wurde nicht eingebaut — Nachrüst-Kandidat nach der Messe. Die Formel steht in PLAN §8.8 (≥ €9.000 im Pot investiert ∧ Impact-Bucket = €0). Einbau wäre eine kleine Erweiterung von `deriveMarkers` + 1 passendes Echo-Event.
+
 **DoD:** `tsc` + `build` grün; Randfälle manuell: Pot < €500 („Kasse fast leer"-Screen unverändert), alles in Rücklage (0 investiert → kein fokus-Marker, kein Bonus, Geld bleibt), klare Dominanz (Marker gesetzt, passendes Echo möglich), Gleichverteilung (`fokus:balanced`); kein +12 mehr in Logik UND UI; Alloc-Zeile im Recap sichtbar.
 
 **Session-Start-Prompt:**

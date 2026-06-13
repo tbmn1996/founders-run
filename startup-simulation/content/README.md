@@ -170,6 +170,40 @@ Intro-Texte, Phase-Namen, Bedingungen — alles was nicht Fragen/Antworten/Event
 
 ---
 
+### 6. `marker.tsv` — Marker-Registry (Gedächtnis des Spiels)
+
+Jeder Marker ist ein kurzes Label, das das Spiel setzt, wenn eine Antwort eine prägende Entscheidung repräsentiert. Spätere Events und Fragen können auf diese Marker reagieren — so entsteht das „Echo" auf frühere Entscheidungen.
+
+| Spalten-Name | Beschreibung | Beispiel |
+|---|---|---|
+| `marker_id` | Eindeutige Kennung; Kleinbuchstaben und Unterstriche, optionales `:suffix` (Regex: `[a-z][a-z0-9_]*(?::[a-z][a-z0-9_]*)?`) | `tech:api` |
+| `label` | Kurzer Anzeigename | `API-Integration` |
+| `beschreibung` | Ein Satz, was dieser Marker bedeutet | `Das Startup hat sich für eine API-first-Architektur entschieden.` |
+
+**Beispielzeilen:**
+
+| marker_id | label | beschreibung |
+|---|---|---|
+| tech:api | API-Integration | Das Startup hat sich für eine API-first-Architektur entschieden. |
+| ziel:enterprise | Enterprise-Fokus | Das Startup zielt bewusst auf Großkunden ab. |
+| cash:discipline | Kassen-Disziplin | Das Startup hat eine nennenswerte Rücklage aufgebaut. |
+
+**Wo Marker gesetzt und genutzt werden:**
+
+- `antworten.tsv` — Spalte `setzt_marker`: Maximal **1 Marker** pro Antwort-Option. Der Wert muss als `marker_id` in `marker.tsv` existieren. Leer = kein Marker. Wenn eine Antwort gewählt wird, trägt das Spiel diesen Marker in die aktive Marker-Menge ein.
+- `fragen.tsv` — Spalte `braucht_marker`: Marker-ID, die gesetzt sein muss, damit dieses Szenario bevorzugt ausgespielt wird. **Nur in Phase 5 erlaubt.** Spalte `bezug`: Pflichtangabe, wenn `braucht_marker` gesetzt ist — maximal 1 Satz, der dem Spieler erklärt, warum diese Situation aufgetaucht ist (erscheint als „Weil ihr…"-Zeile). Verboten, wenn `braucht_marker` leer ist.
+- `events.tsv` — Spalte `braucht_marker`: gleiche Logik wie bei Fragen, aber **nur für Events mit `kategorie = markt`** erlaubt. Spalte `bezug`: Pflichtangabe wenn `braucht_marker` gesetzt, verboten wenn leer.
+
+**Fallback-Garantie (Validator prüft dies zwingend):**
+- Es muss **immer mindestens 1 markerlose Phase-5-Frage** geben — wenn kein Marker passt, greift dieser Fallback.
+- Es muss **immer mindestens 1 markerloses Markt-Event** geben — gleiches Prinzip.
+
+**Wie das Echo im Spiel wirkt:**
+
+Der Markt-Slot (Schritt 7) bevorzugt Echo-Events, deren `braucht_marker` in der aktiven Marker-Menge liegt. Phase 5 bevorzugt entsprechend passende Szenarien. Wenn ein Event oder eine Frage markergebunden ausgespielt wird, erscheint die `bezug`-Zeile als „Weil ihr…"-Anmoderation auf der Karte — der Spieler sieht die Kausalkette. Der Rückblick zeigt bei den verursachenden Entscheidungen eine Kausal-Zeile („→ führte zu: …").
+
+---
+
 ## Goldene Regeln für alle Dateien
 
 1. **Eindeutigkeit:** Jede ID (`frage_id`, `event_id`) darf nur einmal vorkommen — das Build-Skript meldet Duplikate.

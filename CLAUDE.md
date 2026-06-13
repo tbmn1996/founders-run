@@ -62,7 +62,7 @@ Strikte Trennung von Inhalt, Logik und Ablauf:
 - **`startup-simulation/content/*.tsv`** — ALLE Spielinhalte liegen jetzt als Tabellen-Dateien vor (fragen, antworten, events, gruendertypen, texte). **Inhaltspflege passiert ausschließlich dort** — keine Code-Änderung nötig, um Szenarien zu ergänzen oder zu ändern. Anleitung: `content/README.md`.
 - **`scripts/generate-content.mjs`** — Build-Skript, das die TSV-Dateien validiert (eindeutige IDs, Zahlenformat, Konsistenz) und die automatisierte Datei `src/lib/gameContent.generated.ts` (gitignored) generiert. Das Skript wird automatisch vor `npm run dev`, `npm run build` und `npm run lint` ausgeführt und bricht mit deutscher Fehlermeldung (Datei + Zeilennummer) ab, wenn etwas nicht passt — kaputter Inhalt geht nie live. Nach TSV-Änderungen den Dev-Server neu starten (kein Datei-Watch).
 - **`src/lib/gameData.ts`** — Spielinhalte-Exports + Spielmechanik-Konstanten: `STAT_META` (Säulen-Labels/Beschreibungen), `ALLOCATION` (Verteil-Runden-Konfiguration), `INITIAL_STATS`. Importiert die generierten Inhalte (`SCENARIOS`, `LUCK_EVENTS`, `FOUNDER_TYPES`, `SCENARIO_INTRO`, `PHASES`) aus `gameContent.generated.ts` und re-exportiert sie.
-- **`src/lib/gameLogic.ts`** — Spiellogik: `buildRun()` (Zufallsauswahl pro Phase), `pickLuckEvent(category)`, `applyEffects()`, Score-Berechnung, Verteil-Runden-Helfer (`computeAllocationPot`, `applyAllocation`, `formatMoney`), `determineFounderType()` (stärkste Säule → Typ, ausgeglichen → Allrounder).
+- **`src/lib/gameLogic.ts`** — deterministische Spiellogik: slot-gekeytes RNG (`mulberry32`, `hashSlot(runSeed, key)`), `deriveSlots(completed)` (baut die Slot-Folge, fügt bei drohender Pleite max. 1 Krisenslot ein), `resolveStep(runSeed, slot, completed)` (zieht Szenario/Event deterministisch, priorisiert Echo-/P5-Marker), `deriveRunState(completed)` (Replay der History → Stats/Cash/Score), `deriveMarkers(completed)` (Marker rein aus `completed` — Single Source of Truth, kein React-State), `deriveAllocFocus()` (Schwerpunkt-Marker der Budget-Runde). Dazu die reinen Helfer `applyEffects`, `computeScore`, `computeAllocationPot`, `applyAllocation`, `cashBand`, `isOptionLocked`, `formatMoney`, `determineFounderType()` (stärkste Säule → Typ, ausgeglichen → Allrounder).
 - **`src/app/page.tsx`** — kompletter Spielfluss als Screen-State-Machine (`intro → sim → result`) mit den Komponenten `Intro`, `Sim`, `DecisionCard`, `EventCard`, `Result` (inkl. `RecapItem`-Rückblick mit Alternativen und `Closing`-Abschlussfolie). Hier liegen auch die inaktiven Founders-Map-Hooks.
 - **`src/components/StatBar.tsx`** — Anzeige der 4 Säulen (Growth, Innovation, Community, Impact) + Geld.
 - **`src/app/globals.css`** — Design-Tokens des „Aura v2"-Designs; Quelle/Referenz ist `docs/DESIGN_SYSTEM.md`.
@@ -74,9 +74,9 @@ Strikte Trennung von Inhalt, Logik und Ablauf:
 - 2 Glücks-Events pro Lauf mit bewusst **kleinen** Effekten — Glück würzt, dominiert aber nicht (faire Scoreboard-Vergleichbarkeit).
 - Gesamtscore = Entscheidungs-Punkte + Bonus aus den vier Säulen + Geld-Bonus (Pleite-Strafe bei `cash <= 0`).
 
-**Timeline ist fix 8 Schritte:** Entscheidung P1 → Vereins-Event → P2 → P3 → Verteil-Runde → P4 → Markt-Event → P5. **Events pro Lauf:** genau 1 Vereins-Event (`category: "verein"`: Climate Hack, Startup Contacts, VCM-Beitritt) + 1 Markt-Event (`category: "markt"`).
+**Timeline normal 8 Schritte:** Entscheidung P1 → Vereins-Event → P2 → P3 → Verteil-Runde → P4 → Markt-Event → P5. **Optionaler Zusatzslot:** bei drohender Pleite (`cashRaw < €3.000`) schiebt `deriveSlots` genau **1 Krisenslot** (`crisis:runway`) ein — max. 1 pro Lauf. **Events pro Lauf:** genau 1 Vereins-Event (`category: "verein"`: Climate Hack, Startup Contacts, VCM-Beitritt) + 1 Markt-Event (`category: "markt"`). **Echo (S4):** Liegt zum Markt-Slot ein passender aktiver Marker vor, spielt der `markt`-Slot statt eines generischen ein **Echo-Event** aus (mit „Weil ihr…"-Bezug auf eine frühere Entscheidung); sonst Fallback auf den normalen Markt-Pool. Phase 5 priorisiert analog ein markergebundenes Szenario, sonst den markerlosen Fallback. Max. 1 markergebundenes Echo pro Lauf.
 
-**Verteil-Runde (nach Phase 3):** Pot = `min(€18.000, floor(cash / 500) × 500)`. Slider-Schritt: €500. Je €3.000: +4 Punkte auf die Ziel-Säule (Innovation, Growth, Community, Impact), proportional gerundet; pauschal +12 Punkte nur, wenn Geld investiert wurde. Wenn Pot < €500: „Kasse fast leer"-Screen, kein Verteilen, keine Punkte. Werte nicht umbalancieren — Verteil-Runde ist ein separates Gameplay-Element.
+**Verteil-Runde (nach Phase 3):** Pot = `min(€18.000, floor(cash / 500) × 500)`. Slider-Schritt: €500. Je €3.000: +4 Punkte auf die Ziel-Säule (Innovation, Growth, Community, Impact), proportional gerundet. **Kein Vollausgabe-Zwang (S5):** Teilinvestition ist erlaubt, der nicht verteilte Rest bleibt als sichtbare Rücklage in der Kasse. **Kein Pauschalbonus mehr:** der frühere +12-Bonus fürs Investieren wurde mit S5 ersatzlos gestrichen. Stattdessen Marker-Echo — ein dominanter Schwerpunkt setzt einen `fokus:`-Marker (Dominanzformel zentral in `gameData.ts` → `ALLOC_MARKERS`), Gleichverteilung `fokus:balanced`, deutliche Zurückhaltung bei gesunder Kasse `cash:discipline`; diese Marker können ein positives Echo auslösen. Wenn Pot < €500: „Kasse fast leer"-Screen, kein Verteilen, keine Punkte. Werte nicht umbalancieren — Verteil-Runde ist ein separates Gameplay-Element.
 
 **Score-Formel:** `Punkte + round(Säulensumme / 2) + round(cash / 2000)`. Bei `cash ≤ 0`: stattdessen `−30` (Pleite-Strafe).
 
@@ -95,7 +95,7 @@ Strikte Trennung von Inhalt, Logik und Ablauf:
 ## Bekannte Stolperfallen
 
 - **`gameContent.generated.ts` nie direkt editieren** — wird von `scripts/generate-content.mjs` überschrieben. Inhalte ausschließlich in `content/*.tsv` ändern.
-- **Pot-Berechnung zur Laufzeit, nicht beim Build:** `computeAllocationPot()` wird erst beim Mount der `AllocationCard` aufgerufen (Cash-Stand nach Phase 3 zählt). Nicht in `buildTimeline()` vorausberechnen.
+- **Pot-Berechnung zur Laufzeit, nicht vorab:** `computeAllocationPot()` wird erst beim Auflösen des `alloc`-Slots (Mount der `AllocationCard`) aufgerufen (Cash-Stand nach Phase 3 zählt). Nicht vorausberechnen — der Pot hängt vom Replay der bisherigen Entscheidungen ab (`deriveRunState`).
 - **Kein globaler State:** Die gesamte App läuft als lokale State-Machine in `page.tsx`. Kein Zustand wird persistiert — bei jedem Reload startet das Spiel neu.
 - **`navigator.share` ist Pflicht** für den Teilen-Button auf dem Ergebnis-Screen. Vor Deployment prüfen, dass die API vorhanden und eingebunden ist.
 - **Keine alten API-Referenzen:** Beim Refactoring darauf achten, dass veraltete Feldnamen (z. B. frühere Scoring-Hilfsfunktionen) vollständig entfernt werden — `npx tsc --noEmit` fängt das ab.
@@ -110,7 +110,7 @@ Vollständige Regeln stehen in `Scripts/CLAUDE.md §3`. Kurzfassung für dieses 
 
 ## graphify
 
-Dieser Wissens-Graph liegt unter `startup-simulation/src/graphify-out/` (55 Nodes, 100 Edges, 9 Communities). God Nodes: `formatMoney`, `Stats`, `buildTimeline`, `AllocationCard`, `Result`.
+Dieser Wissens-Graph liegt unter `startup-simulation/src/graphify-out/` (Node-/Edge-/Community-Zahlen siehe aktueller Graph — mit `graphify update` aktuell halten). Zentrale Knoten: `formatMoney`, `Stats`, `AllocationCard`, `Result` sowie der deterministische Kern `deriveSlots`/`resolveStep`/`deriveRunState`.
 
 When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
 

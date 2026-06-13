@@ -122,7 +122,7 @@ export const STAT_META: Record<
 };
 
 // ---------------------------------------------------------------------------
-// Allokations-Runde: Parameter und Bereiche (Verteil-Runde nach Phase 5).
+// Allokations-Runde: Parameter und Bereiche (Verteil-Runde nach Phase 3).
 // Quelle: pot=Math.min(18000,...) und buckets-Array im HTML-Prototyp.
 // ---------------------------------------------------------------------------
 export interface AllocationBucket {

@@ -11,7 +11,8 @@ Alle Punkte müssen vor dem Merge-Commit erledigt oder explizit als „nicht zut
 - [x] `npx tsc --noEmit` aus `startup-simulation/` → **0 Fehler** _(2026-06-13)_
 - [x] `npm run build` aus `startup-simulation/` → **fehlerfrei** (✓ Compiled successfully; bricht auch bei ungültigem TSV ab) _(2026-06-13)_
 - [x] `node scripts/check-determinism.mjs` → **grün**: 18/18 Checks (RNG-Stabilität, Echo/P5, Back-Semantik, Krise, Dominanzformel, `cash:discipline`, +12 weg) _(2026-06-13)_
-- [x] `node scripts/simulate.mjs` (2000 Läufe) → **alle Invarianten bestanden, Exit 0**. Statistik: Krisenquote 30,4 %, Echo-Quote 70,9 %, Marker-P5 43,3 %, Pleitequote 7,5 %, Score 24/129/214 _(2026-06-13)_
+- [x] `node scripts/simulate.mjs` (2000 Läufe) → **alle Invarianten bestanden, Exit 0**. Statistik: Krisenquote 30,4 %, Echo-Quote 70,9 %, Marker-P5 43,3 %, Pleitequote 7,5 %, Score-Spanne 6/120/210 _(Stand nach S4d-Rebalance, 2026-06-13)_
+  - _Hinweis:_ nach dem S4d-Punkte-Rebalance (`03e61ae`) erneut verifiziert — generate/tsc/build, 18/18 Determinismus-Checks und alle Simulate-Invarianten weiterhin grün; Marker-/Echo-Spalte unverändert.
   - Spiel terminiert immer (kein Endlos-Loop)
   - `slots.length ≤ 9` in jedem Lauf
   - Nie 0 wählbare Optionen in einem Schritt

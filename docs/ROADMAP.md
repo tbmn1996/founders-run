@@ -30,7 +30,10 @@
 | S3 | Krise & Beinahe-Pleite | B — deploybarer Zwischenstand | ☑ abgeschlossen | 7ef3f0e |
 | S4 | Gedächtnis: Marker + Echo + P5 (Herzstück) | C — Kern-Produktziel erreicht | ☑ abgeschlossen | 0c927fd / ef718c8 / a5c1844 |
 | S5 | Budget-Wette (Reserve + Alloc-Marker) | D — Feature-komplett | ☑ abgeschlossen | 2a2a6aa |
-| S6 | Stabilisierung, Sim-Checks, Merge + Deploy | Live auf main | ⏳ in Arbeit | — |
+| S6 | Stabilisierung, Sim-Checks, Merge-Readiness | Merge-bereit (Freigabe offen) | ☑ abgeschlossen | 9aa30c7 |
+| S4d | Content-Rebalance Entscheidungspunkte (Selbstwirksamkeit) | — (Content-Nachschärfung) | ☑ abgeschlossen | 03e61ae |
+
+> **S4d (2026-06-13):** Nachträglicher Punkte-Rebalance in `content/antworten.tsv` (9 Fragen) — jede Frage hat jetzt eine klar schwache/riskante Option (Spanne ≥ 14, Score-Minimum in 2000 Läufen von 24 auf 6 gesunken). RNG/Marker/Echo unverändert; Determinismus- und Simulate-Invarianten nach dem Rebalance erneut grün.
 
 ---
 

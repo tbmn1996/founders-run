@@ -31,6 +31,16 @@ export interface Stats {
   cash: number;
 }
 
+/**
+ * Marker-Vokabular für vorbereitete Konsequenz-Bezüge.
+ * Quelle: content/marker.tsv.
+ */
+export interface MarkerDef {
+  id: string;
+  label: string;
+  description: string;
+}
+
 export interface Option {
   id: string;
   label: string;
@@ -40,15 +50,21 @@ export interface Option {
   points: number;
   /** Kurze Lern-/Konsequenz-Erklärung — der "Aha"-Moment. */
   outcome: string;
+  /** Optionaler Marker aus content/marker.tsv, den diese Antwort setzt. */
+  setsMarker?: string;
 }
 
 export interface Scenario {
   id: string;
-  /** 1-basierte Phasen-Nummer (Bezug zu PHASES). */
-  phase: number;
+  /** 1-basierte Phasen-Nummer (Bezug zu PHASES) oder Sondersituation. */
+  phase: number | "krise";
   title: string;
   situation: string;
   options: Option[];
+  /** Optionaler Marker aus content/marker.tsv, den dieses Szenario voraussetzt. */
+  requiresMarker?: string;
+  /** Optionaler Bezugstext aus der TSV-Spalte "bezug". */
+  referenceText?: string;
 }
 
 export interface LuckEvent {
@@ -58,6 +74,10 @@ export interface LuckEvent {
   effects: Partial<Stats>;
   /** Herkunft des Events: Vereins-Event oder Markt-Event. */
   category: EventCategory;
+  /** Optionaler Marker aus content/marker.tsv, den dieses Event voraussetzt. */
+  requiresMarker?: string;
+  /** Optionaler Bezugstext aus der TSV-Spalte "bezug". */
+  referenceText?: string;
 }
 
 export interface FounderType {
@@ -67,6 +87,24 @@ export interface FounderType {
   description: string;
   emoji: string;
 }
+
+export type CashBandKey = "solid" | "strained" | "critical";
+
+export const CASH_BANDS: Record<
+  CashBandKey,
+  { label: string; min: number }
+> = {
+  solid:    { label: "Solide",     min: 10000 },
+  strained: { label: "Angespannt", min: 5000 },
+  critical: { label: "Kritisch",   min: 0 },
+};
+
+export const CRISIS = {
+  /** Unterhalb dieser ungeclampeten Cash-Grenze wird max. einmal pro Lauf die Krise eingefügt. */
+  triggerCash: 3000,
+  slotId: "crisis:runway",
+  maxPerRun: 1,
+} as const;
 
 // ---------------------------------------------------------------------------
 // Stat-Metadaten: Label, Emoji, Maximalwert je Säule/Cash.
@@ -84,7 +122,7 @@ export const STAT_META: Record<
 };
 
 // ---------------------------------------------------------------------------
-// Allokations-Runde: Parameter und Bereiche (Verteil-Runde nach Phase 5).
+// Allokations-Runde: Parameter und Bereiche (Verteil-Runde nach Phase 3).
 // Quelle: pot=Math.min(18000,...) und buckets-Array im HTML-Prototyp.
 // ---------------------------------------------------------------------------
 export interface AllocationBucket {
@@ -100,8 +138,8 @@ export const ALLOCATION = {
   step: 500,
   /** Stat-Punkte je €3.000, die in einen Bucket fließen. */
   gainPer3000: 4,
-  /** Feste Bonus-Punkte fürs Abschließen der Verteil-Runde. */
-  bonusPoints: 12,
+  // bonusPoints wurde mit S5 (Budget-Wette) ersatzlos entfernt.
+  // Der Pauschalbonus wurde durch markerbasierte Echo-Events ersetzt.
   buckets: [
     { label: "Bessere KI & Produkt",         stat: "innovation" as StatKey, emoji: "💡" },
     { label: "Werbung & Reichweite",          stat: "growth"     as StatKey, emoji: "📣" },
@@ -109,6 +147,23 @@ export const ALLOCATION = {
     { label: "Verantwortung & Datenschutz",   stat: "impact"     as StatKey, emoji: "🛡️" },
   ] as AllocationBucket[],
 };
+
+// ---------------------------------------------------------------------------
+// Alloc-Marker-Schwellen (S5, Budget-Wette). Werte aus PLAN §8.8 —
+// zentral hier, damit Logik und UI dieselbe Quelle nutzen.
+// ---------------------------------------------------------------------------
+export const ALLOC_MARKERS = {
+  /** Dominanz: höchster Bucket ≥ minTop € UND ≥ minShare des Ausgegebenen UND Abstand zum zweithöchsten ≥ minGap €. */
+  dominance: { minTop: 6000, minShare: 0.4, minGap: 2000 },
+  /** Erst ab dieser Investitionssumme wird überhaupt ein fokus-Marker gesetzt. */
+  minSpentForFocus: 6000,
+  /** cash:discipline: spent ≤ maxSpentShare × Pot UND Cash nach der Runde ≥ minCashAfter €. */
+  discipline: { maxSpentShare: 0.4, minCashAfter: 10000 },
+  /** Marker-IDs je Bucket — Reihenfolge entspricht ALLOCATION.buckets. */
+  bucketMarkers: ["fokus:produkt", "fokus:marketing", "fokus:community", "fokus:datenschutz"],
+  balancedMarker: "fokus:balanced",
+  disciplineMarker: "cash:discipline",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Spielinhalte werden aus der generierten Datei re-exportiert.
@@ -122,6 +177,7 @@ export {
   FOUNDER_TYPES,
   SCENARIO_INTRO,
   PHASES,
+  MARKERS,
 } from "./gameContent.generated";
 
 /** Startwerte. Cash in Euro. Quelle: INIT im HTML-Prototyp. */
@@ -132,4 +188,3 @@ export const INITIAL_STATS: Stats = {
   impact:     20,
   cash:       20000,
 };
-

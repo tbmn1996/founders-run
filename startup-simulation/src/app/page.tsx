@@ -18,9 +18,11 @@ import {
 import StatBar from "@/components/StatBar";
 import {
   ALLOCATION,
+  ALLOC_MARKERS,
   PHASES,
   SCENARIO_INTRO,
   STAT_META,
+  CASH_BANDS,
   type EventCategory,
   type LuckEvent,
   type Option,
@@ -29,15 +31,19 @@ import {
   type Stats,
 } from "@/lib/gameData";
 import {
-  buildRun,
   computeAllocationPot,
   computeScore,
+  deriveAllocFocus,
+  deriveSlots,
   deriveRunState,
   determineFounderType,
   formatMoney,
-  pickLuckEvent,
+  isOptionLocked,
+  resolveStep,
   type CompletedStep,
   type DecisionRecord,
+  type DerivedRunState,
+  type Step,
 } from "@/lib/gameLogic";
 
 // ---------------------------------------------------------------------------
@@ -45,38 +51,6 @@ import {
 // ---------------------------------------------------------------------------
 
 type Screen = "intro" | "sim" | "result";
-
-/** Ein Schritt in der Spielzeitachse. */
-type Step =
-  | { kind: "decision"; scenario: Scenario }
-  | { kind: "event"; event: LuckEvent }
-  | { kind: "alloc" };
-
-// ---------------------------------------------------------------------------
-// Zeitachse
-// ---------------------------------------------------------------------------
-
-/**
- * Baut die feste 8-Schritte-Reihenfolge:
- *   [decision(P1), event(verein), decision(P2), decision(P3),
- *    alloc, decision(P4), event(markt), decision(P5)]
- * Events werden mit pickLuckEvent nach Kategorie gezogen.
- */
-function buildTimeline(): Step[] {
-  const run = buildRun(); // 5 Szenarien, je eins pro Phase
-  const evVerein = pickLuckEvent("verein" as EventCategory);
-  const evMarkt = pickLuckEvent("markt" as EventCategory);
-  return [
-    { kind: "decision", scenario: run[0] },
-    { kind: "event",    event: evVerein },
-    { kind: "decision", scenario: run[1] },
-    { kind: "decision", scenario: run[2] },
-    { kind: "alloc" },
-    { kind: "decision", scenario: run[3] },
-    { kind: "event",    event: evMarkt },
-    { kind: "decision", scenario: run[4] },
-  ];
-}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -211,6 +185,13 @@ function downloadFile(file: File) {
   URL.revokeObjectURL(url);
 }
 
+function createRunSeed(): number {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    return crypto.getRandomValues(new Uint32Array(1))[0];
+  }
+  return Math.floor(Math.random() * 0x100000000);
+}
+
 // ---------------------------------------------------------------------------
 // Hilfkomponente: Effekt-Chips
 // ---------------------------------------------------------------------------
@@ -230,7 +211,7 @@ function EffectChips({ effects }: { effects: Partial<Stats> }) {
         // Cash-Werte ohne doppeltes Geld-Label.
         const label =
           k === "cash"
-            ? `${STAT_META[k].label} ${pos ? "+" : "−"}${formatMoney(v)}`
+            ? `${STAT_META[k].label} ${pos ? "+" : ""}${formatMoney(v)}`
             : `${STAT_META[k].label} ${pos ? "+" : ""}${v}`;
         return (
           <span
@@ -255,20 +236,25 @@ function EffectChips({ effects }: { effects: Partial<Stats> }) {
 
 export default function Game() {
   const [screen, setScreen] = useState<Screen>("intro");
-  const [timeline, setTimeline] = useState<Step[]>([]);
+  const [runSeed, setRunSeed] = useState<number | null>(null);
   const [completed, setCompleted] = useState<CompletedStep[]>([]);
   /** Temporäre Wahl — steuert Feedback-Panel, wird erst beim Weiterklicken committet. */
   const [chosen, setChosen] = useState<Option | null>(null);
 
-  const { stats, points, records } = useMemo(
+  const { stats, cashRaw, points, records, allocation } = useMemo(
     () => deriveRunState(completed),
     [completed]
   );
   const step = completed.length;
-  const currentStep = timeline[step];
+  const slots = useMemo(() => deriveSlots(completed), [completed]);
+  const currentSlot = step < slots.length ? slots[step] : undefined;
+  const currentStep = useMemo(
+    () => (runSeed === null || !currentSlot ? null : resolveStep(runSeed, currentSlot, completed)),
+    [completed, currentSlot, runSeed]
+  );
 
   function startGame() {
-    setTimeline(buildTimeline());
+    setRunSeed(createRunSeed());
     setCompleted([]);
     setChosen(null);
     setScreen("sim");
@@ -286,9 +272,9 @@ export default function Game() {
     if (!currentStep) return;
 
     const nextCompleted =
-      currentStep.kind === "decision"
+      currentStep.kind === "decision" || currentStep.kind === "crisis"
         ? chosen
-          ? [...completed, { kind: "decision" as const, scenario: currentStep.scenario, chosen }]
+          ? [...completed, { kind: currentStep.kind, scenario: currentStep.scenario, chosen }]
           : completed
         : currentStep.kind === "event"
           ? [...completed, { kind: "event" as const, event: currentStep.event }]
@@ -298,20 +284,21 @@ export default function Game() {
 
     setChosen(null);
     setCompleted(nextCompleted);
-    if (nextCompleted.length >= timeline.length) {
+    if (nextCompleted.length >= deriveSlots(nextCompleted).length) {
       setScreen("result");
     }
   }
 
   /**
-   * Callback für AllocationCard: nimmt Betrags-Array entgegen,
-   * wendet es auf Stats an und fügt Bonus-Punkte hinzu.
+   * Callback für AllocationCard: nimmt Betrags-Array entgegen und wendet
+   * es auf die History an. Marker und Recap-Daten werden deterministisch
+   * aus der History abgeleitet (kein manueller Bonus mehr seit S5).
    */
   function finishAlloc(amounts: number[]) {
     const nextCompleted = [...completed, { kind: "alloc" as const, amounts }];
     setCompleted(nextCompleted);
     setChosen(null);
-    if (nextCompleted.length >= timeline.length) {
+    if (nextCompleted.length >= deriveSlots(nextCompleted).length) {
       setScreen("result");
     }
   }
@@ -330,7 +317,7 @@ export default function Game() {
     }
 
     if (completed.length === 0) {
-      setTimeline([]);
+      setRunSeed(null);
       setScreen("intro");
       return;
     }
@@ -344,11 +331,12 @@ export default function Game() {
         {screen === "intro" && <Intro key="intro" onStart={startGame} />}
         {screen === "sim" && currentStep && (
           <Sim
-            key={`sim-${step}-${chosen ? "fb" : "q"}`}
+            key={`sim-${currentSlot?.id ?? step}-${chosen ? "fb" : "q"}`}
             step={currentStep}
             stepIndex={step}
-            total={timeline.length}
+            total={slots.length}
             stats={stats}
+            cashRaw={cashRaw}
             chosen={chosen}
             onChoose={choose}
             onAdvance={advance}
@@ -362,6 +350,7 @@ export default function Game() {
             stats={stats}
             points={points}
             records={records}
+            allocation={allocation}
             onRestart={startGame}
             onBack={goBack}
           />
@@ -464,6 +453,7 @@ function Sim({
   stepIndex,
   total,
   stats,
+  cashRaw,
   chosen,
   onChoose,
   onAdvance,
@@ -472,8 +462,9 @@ function Sim({
 }: {
   step: Step;
   stepIndex: number;
-  total: number;      // = 8 Schritte
+  total: number;      // = 8 Schritte, bei Krise 9
   stats: Stats;
+  cashRaw: number;
   chosen: Option | null;
   onChoose: (s: Scenario, o: Option) => void;
   onAdvance: () => void;
@@ -523,6 +514,8 @@ function Sim({
       ) : (
         <DecisionCard
           scenario={step.scenario}
+          variant={step.kind === "crisis" ? "crisis" : "decision"}
+          cashRaw={cashRaw}
           chosen={chosen}
           onChoose={onChoose}
           onAdvance={onAdvance}
@@ -538,24 +531,54 @@ function Sim({
 
 function DecisionCard({
   scenario,
+  variant = "decision",
+  cashRaw,
   chosen,
   onChoose,
   onAdvance,
 }: {
   scenario: Scenario;
+  variant?: "decision" | "crisis";
+  cashRaw: number;
   chosen: Option | null;
   onChoose: (s: Scenario, o: Option) => void;
   onAdvance: () => void;
 }) {
-  const phase = PHASES.find((p) => p.n === scenario.phase);
+  const isCrisis = variant === "crisis";
+  const phase = typeof scenario.phase === "number"
+    ? PHASES.find((p) => p.n === scenario.phase)
+    : undefined;
+  const lockedOptions = scenario.options.map((option) => ({
+    option,
+    locked: isOptionLocked(option, cashRaw),
+    cost: Math.max(0, -(option.effects.cash ?? 0)),
+  }));
+  const lastResort =
+    lockedOptions.every(({ locked }) => locked)
+      ? lockedOptions.reduce((best, current) => current.cost < best.cost ? current : best).option
+      : null;
+
   return (
     <div className="flex flex-1 flex-col">
-      <span className="section-label">
-        Phase {scenario.phase}/5 · {phase?.name}
+      <span
+        className="section-label"
+        style={isCrisis ? { color: "#f59e0b" } : undefined}
+      >
+        {isCrisis ? "Beinahe-Pleite · Runway-Krise" : `Phase ${scenario.phase}/5 · ${phase?.name}`}
       </span>
       <h2 className="mt-1.5 text-[22px] font-bold leading-snug tracking-[-0.02em]">
         {scenario.title}
       </h2>
+      {scenario.referenceText && (
+        /* "Weil ihr..."-Zeile (S4): markergebundenes Phase-5-Szenario erklärt
+           seinen Bezug zur früheren Entscheidung — kommt aus der TSV-Spalte "bezug" */
+        <p
+          className="mt-2 rounded-lg px-3 py-2 text-[12px] font-medium leading-relaxed"
+          style={{ background: "rgba(94,200,255,0.10)", color: "#5ec8ff" }}
+        >
+          {scenario.referenceText}
+        </p>
+      )}
       <p className="mt-2 text-[13.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
         {scenario.situation}
       </p>
@@ -563,21 +586,49 @@ function DecisionCard({
       <div className="mt-4 flex flex-col gap-2.5">
         {scenario.options.map((o) => {
           const isChosen = chosen?.id === o.id;
-          const dimmed = chosen && !isChosen;
+          const cashEffect = o.effects.cash ?? 0;
+          const cost = Math.max(0, -cashEffect);
+          const isLastResort = lastResort?.id === o.id;
+          const locked = isOptionLocked(o, cashRaw) && !isLastResort;
+          const risky = cashEffect < 0 && cashRaw + cashEffect < CASH_BANDS.strained.min;
+          const dimmed = (chosen && !isChosen) || locked;
           return (
             <button
               key={o.id}
-              disabled={!!chosen}
+              disabled={!!chosen || locked}
               onClick={() => onChoose(scenario, o)}
-              className="btn glass-card-inner flex items-center justify-between gap-3 p-3.5 text-left text-[13.5px] font-medium"
+              className="btn glass-card-inner flex items-start justify-between gap-3 p-3.5 text-left text-[13.5px] font-medium"
               style={{
-                opacity: dimmed ? 0.4 : 1,
-                borderColor: isChosen ? "var(--accent)" : "transparent",
+                opacity: dimmed ? 0.48 : 1,
+                borderColor: isChosen
+                  ? isCrisis ? "#f59e0b" : "var(--accent)"
+                  : locked ? "rgba(248,113,113,0.42)" : "transparent",
                 borderWidth: 1.5,
                 borderStyle: "solid",
               }}
             >
-              <span>{o.label}</span>
+              <span className="flex flex-col gap-1">
+                <span>{o.label}</span>
+                {(locked || isLastResort || risky) && (
+                  <span className="flex flex-wrap gap-1.5">
+                    {locked && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(248,113,113,0.12)", color: "var(--error)" }}>
+                        Zu teuer — braucht {formatMoney(cost)}
+                      </span>
+                    )}
+                    {isLastResort && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(255,94,0,0.12)", color: "var(--accent)" }}>
+                        Letzter Ausweg
+                      </span>
+                    )}
+                    {risky && !locked && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(245,158,11,0.14)", color: "#f59e0b" }}>
+                        Riskant
+                      </span>
+                    )}
+                  </span>
+                )}
+              </span>
               {isChosen && <Check size={16} style={{ color: "var(--accent)" }} />}
             </button>
           );
@@ -607,6 +658,11 @@ function DecisionCard({
                 {chosen.points} Punkte
               </span>
             </div>
+            {isCrisis && (
+              <p className="mt-2 rounded-lg px-3 py-2 text-[12px] font-medium" style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
+                Ihr gewinnt wieder Handlungsspielraum, bezahlt den Ausweg aber über Fokus, Vertrauen oder Substanz.
+              </p>
+            )}
             <p className="mt-2 text-[13px] leading-relaxed">{chosen.outcome}</p>
             <div className="mt-3">
               <EffectChips effects={chosen.effects} />
@@ -636,6 +692,9 @@ const EVENT_CATEGORY_LABEL: Record<EventCategory, string> = {
 
 function EventCard({ event, onAdvance }: { event: LuckEvent; onAdvance: () => void }) {
   const catLabel = EVENT_CATEGORY_LABEL[event.category];
+  // Echo-Event: markergebundenes Markt-Event, das auf eine frühere Entscheidung
+  // reagiert (S4). Erkennung rein über die Daten — kein eigener State.
+  const isEcho = Boolean(event.requiresMarker);
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
@@ -659,8 +718,27 @@ function EventCard({ event, onAdvance }: { event: LuckEvent; onAdvance: () => vo
       >
         {catLabel}
       </span>
-      <span className="section-label mt-1">Zufallsereignis</span>
+      {isEcho ? (
+        /* Echo-Badge: kennzeichnet das Event als direkte Folge einer Entscheidung */
+        <span
+          className="mx-auto mt-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+          style={{ background: "rgba(94,200,255,0.12)", color: "#5ec8ff" }}
+        >
+          Folge eurer Entscheidung
+        </span>
+      ) : (
+        <span className="section-label mt-1">Zufallsereignis</span>
+      )}
       <h2 className="mt-1 text-xl font-bold tracking-[-0.02em]">{event.title}</h2>
+      {event.referenceText && (
+        /* "Weil ihr..."-Zeile: erklärt den Bezug zur früheren Entscheidung */
+        <p
+          className="mx-auto mt-2 max-w-xs rounded-lg px-3 py-2 text-[12px] font-medium leading-relaxed"
+          style={{ background: "rgba(94,200,255,0.10)", color: "#5ec8ff" }}
+        >
+          {event.referenceText}
+        </p>
+      )}
       <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed" style={{ color: "var(--muted)" }}>
         {event.text}
       </p>
@@ -776,21 +854,31 @@ function AllocationCard({
         <div className="mt-4">
           <EffectChips effects={gains} />
         </div>
-        {/* Bonus-Punkte Badge */}
-        <div className="mt-4 flex items-center gap-2">
-          <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums"
-            style={{
-              background: "rgba(74,222,128,0.12)",
-              color: "var(--success)",
-            }}
-          >
-            +{ALLOCATION.bonusPoints} Punkte
-          </span>
-          <span className="text-[11px]" style={{ color: "var(--muted)" }}>
-            für vollständige Investition
-          </span>
-        </div>
+        {/* Rücklage positiv framen (S5: statt +12-Badge) */}
+        {remaining > 0 && (
+          <p className="mt-3 text-[12px] leading-relaxed" style={{ color: "var(--muted)" }}>
+            {formatMoney(remaining)} bleiben als Rücklage in der Kasse.
+          </p>
+        )}
+        {/* Schwerpunkt-Hinweis beim Bestätigen (§9.5): nutzt dieselbe Dominanz-
+            formel wie die Marker-Logik (deriveAllocFocus), damit UI-Hinweis und
+            gesetzter Marker nie auseinanderlaufen. Kein Ausgangs-Spoiler. */}
+        {(() => {
+          const fokus = deriveAllocFocus(amounts);
+          if (!fokus) return null;
+          const bucketIdx = ALLOC_MARKERS.bucketMarkers.indexOf(
+            fokus as (typeof ALLOC_MARKERS.bucketMarkers)[number]
+          );
+          const label =
+            bucketIdx >= 0
+              ? `Starker Fokus: ${ALLOCATION.buckets[bucketIdx]!.label}`
+              : "Ausgewogen investiert";
+          return (
+            <p className="mt-2 text-[12px] font-medium" style={{ color: "var(--accent)" }}>
+              {label} — mal sehen, was das nach sich zieht.
+            </p>
+          );
+        })()}
         <button
           onClick={() => onFinish(amounts)}
           className="btn btn-primary mt-6 flex items-center justify-center gap-2 py-3 text-[14px]"
@@ -872,25 +960,25 @@ function AllocationCard({
         ))}
       </div>
 
-      {/* „Noch zu verteilen"-Anzeige */}
+      {/* Rücklage-Anzeige (S5: positiv geframt — kein Vollausgabe-Zwang mehr) */}
       <div className="mt-4 flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--surface-3)" }}>
-        <span className="section-label">Noch zu verteilen</span>
+        <span className="section-label">
+          {remaining > 0 ? "Rücklage in der Kasse" : "Vollständig investiert"}
+        </span>
         <span
           className="text-[15px] font-bold tabular-nums"
-          style={{ color: remaining === 0 ? "var(--success)" : "var(--accent)" }}
+          style={{ color: "var(--success)" }}
         >
           {formatMoney(remaining)}
         </span>
       </div>
 
-      {/* Bestätigen-Button: disabled solange remaining ≠ 0 */}
+      {/* Bestätigen-Button: ab S5 bei beliebiger Verteilung (auch 0 €) erlaubt */}
       <button
         onClick={() => setConfirmed(true)}
-        disabled={remaining !== 0}
         className="btn btn-primary mt-4 flex w-full items-center justify-center gap-2 py-3 text-[14px]"
-        style={{ opacity: remaining !== 0 ? 0.5 : 1 }}
       >
-        {remaining !== 0 ? "Verteile dein ganzes Geld" : "Investieren →"}
+        Investieren →
       </button>
     </motion.div>
   );
@@ -901,10 +989,9 @@ function AllocationCard({
 // ---------------------------------------------------------------------------
 
 /**
- * Ergebnis-Screen: Founder-Typ, Score (inkl. Alloc-Bonus), Werte, Rückblick.
- * Alloc-Runde taucht im Rückblick NICHT auf (nur DecisionRecords),
- * aber die +12 Bonus-Punkte sind im points-State enthalten und fließen
- * über computeScore in den angezeigten Score ein.
+ * Ergebnis-Screen: Founder-Typ, Score, Werte, Rückblick.
+ * Ab S5: kein +12-Pauschalbonus mehr; Alloc-Runde erscheint als
+ * eigene Zeile im Rückblick (Verteilung + Rücklage).
  *
  * Enthält:
  * - VCM-Logo (/logos/vcm.png) unter dem Founder-Typ-Emoji
@@ -916,12 +1003,15 @@ function Result({
   stats,
   points,
   records,
+  allocation,
   onRestart,
   onBack,
 }: {
   stats: Stats;
   points: number;
   records: DecisionRecord[];
+  /** Allokations-Daten für die Recap-Zeile (S5). */
+  allocation: DerivedRunState["allocation"];
   onRestart: () => void;
   onBack: () => void;
 }) {
@@ -1045,12 +1135,16 @@ function Result({
         </div>
       </div>
 
-      {/* Rückblick — nur Entscheidungsrunden, keine Alloc-Runde */}
+      {/* Rückblick — Entscheidungsrunden + Alloc-Zeile (S5) */}
       <div className="flex flex-col gap-2">
         <span className="section-label px-1">Deine Entscheidungen im Rückblick</span>
         {records.map((rec, i) => (
-          <RecapItem key={rec.scenario.id} rec={rec} index={i} />
+          <RecapItem key={`${rec.kind}-${rec.scenario.id}`} rec={rec} index={i} />
         ))}
+        {/* Alloc-Recap-Zeile: zeigt Verteilung + Rücklage (nur wenn Alloc abgeschlossen) */}
+        {allocation && (
+          <AllocRecapItem allocation={allocation} />
+        )}
       </div>
 
       <button
@@ -1073,6 +1167,10 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
   const [open, setOpen] = useState(false);
   // index wird für künftige Nummerierung vorgehalten
   void index;
+  const label =
+    rec.kind === "crisis"
+      ? `Beinahe-Pleite · ${rec.scenario.title}`
+      : `Phase ${rec.scenario.phase} · ${rec.scenario.title}`;
   return (
     <div className="glass-card overflow-hidden">
       <button
@@ -1081,7 +1179,7 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
       >
         <div className="min-w-0 flex-1">
           <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-            Phase {rec.scenario.phase} · {rec.scenario.title}
+            {label}
           </span>
           <p className="mt-0.5 truncate text-[13px] font-semibold">
             <Check size={13} className="mr-1 inline" style={{ color: "var(--accent)" }} />
@@ -1102,6 +1200,15 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="px-3.5 pb-3.5">
+              {rec.scenario.referenceText && (
+                /* Kausalzeile (S4): zeigt im Rückblick, warum dieses Szenario kam */
+                <p
+                  className="mb-2 rounded-lg px-3 py-2 text-[11.5px] font-medium leading-relaxed"
+                  style={{ background: "rgba(94,200,255,0.10)", color: "#5ec8ff" }}
+                >
+                  {rec.scenario.referenceText}
+                </p>
+              )}
               {/* Gewählt */}
               <div className="glass-card-inner p-3">
                 <div className="flex items-center justify-between">
@@ -1147,6 +1254,61 @@ function RecapItem({ rec, index }: { rec: DecisionRecord; index: number }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AllocRecapItem — Alloc-Zeile im Rückblick (S5: Budget-Wette)
+// ---------------------------------------------------------------------------
+
+/**
+ * Einfache, nicht aufklappbare Karte, die die Investitionsverteilung
+ * und die Rücklage im Rückblick zeigt.
+ */
+function AllocRecapItem({ allocation }: { allocation: NonNullable<DerivedRunState["allocation"]> }) {
+  const { amounts, spent, reserve } = allocation;
+  return (
+    <div className="glass-card p-3.5">
+      <span
+        className="text-[10px] font-semibold uppercase tracking-wide"
+        style={{ color: "var(--muted)" }}
+      >
+        Investitionsrunde · Budget-Einsatz
+      </span>
+      <div className="mt-1.5 flex flex-col gap-1">
+        {ALLOCATION.buckets.map((bucket, i) => {
+          const amt = amounts[i] ?? 0;
+          if (amt === 0) return null;
+          return (
+            <div key={bucket.stat} className="flex items-center justify-between text-[12px]">
+              <span>
+                <span className="mr-1">{bucket.emoji}</span>
+                {bucket.label}
+              </span>
+              <span className="tabular-nums font-semibold" style={{ color: "var(--accent)" }}>
+                {formatMoney(amt)}
+              </span>
+            </div>
+          );
+        })}
+        {spent === 0 && (
+          <p className="text-[12px]" style={{ color: "var(--muted)" }}>
+            Gesamtes Budget als Rücklage behalten.
+          </p>
+        )}
+      </div>
+      {/* Zusammenfassung */}
+      <div className="mt-2 flex items-center justify-between border-t pt-2 text-[11.5px]" style={{ borderColor: "var(--surface-3)" }}>
+        <span style={{ color: "var(--muted)" }}>
+          {spent > 0 ? `${formatMoney(spent)} investiert` : "Nichts investiert"}
+        </span>
+        {reserve > 0 && (
+          <span className="font-semibold" style={{ color: "var(--success)" }}>
+            {formatMoney(reserve)} Rücklage
+          </span>
+        )}
+      </div>
     </div>
   );
 }

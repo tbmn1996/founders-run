@@ -11,3 +11,9 @@ scripts/.content-snapshot.json
 
 # Graphify Wissens-Graph (lokal, wird per `graphify update startup-simulation/src` neu generiert)
 src/graphify-out/
+
+# Temp-Ordner des Determinismus-Checks (scripts/check-determinism.mjs)
+.tmp-check/
+
+# Temp-Ordner des Simulations-Scripts (scripts/simulate.mjs)
+.tmp-sim/

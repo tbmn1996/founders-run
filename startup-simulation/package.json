@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "prelint": "npm run generate",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "sim": "node scripts/simulate.mjs"
   },
   "dependencies": {
     "framer-motion": "^12.0.0",

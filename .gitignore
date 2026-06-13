@@ -12,3 +12,9 @@ out/
 
 # Lokale Arbeitsartefakte (Content-Exporte, Screenshots etc.)
 outputs/
+
+# Verirrtes graphify-Artefakt im Repo-Root (der echte Graph liegt unter startup-simulation/src/graphify-out/)
+/graphify-out/
+
+# Playwright-MCP-Arbeitsartefakte (Snapshots, Konsol-Logs der Live-Checks)
+.playwright-mcp/

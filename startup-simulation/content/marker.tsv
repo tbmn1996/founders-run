@@ -1,0 +1,16 @@
+marker_id	label	beschreibung
+ziel:enterprise	Enterprise-Kurs	Ihr habt euch früh auf große Firmenkunden ausgerichtet.
+tech:api	Externe KI-API	Ihr baut euer Produkt auf der API eines großen KI-Anbieters auf.
+tech:eigenmodell	Eigenes KI-Modell	Ihr entwickelt euer eigenes KI-Modell statt fremde Technik zu mieten.
+funding:investor	Investoren-Kapital	Ihr habt externes Kapital aufgenommen und Anteile abgegeben.
+funding:bootstrap	Bootstrapping	Ihr finanziert euch aus eigener Kraft, ohne externes Kapital.
+risiko:datendeal	Daten-Deal	Ihr habt Kundendaten gegen kurzfristige Vorteile eingetauscht.
+tempo:hoch	Vollgas-Wachstum	Ihr habt auf maximales Tempo gesetzt, auch auf Kosten der Stabilität.
+abhaengigkeit:marketplace	Marketplace-Abhängigkeit	Ihr vertreibt euer Produkt über die Plattform eines großen Anbieters.
+krise:notfinanzierung	Notfinanzierung	Ihr habt euch in der Runway-Krise mit einer Notfinanzierung gerettet.
+fokus:produkt	Produkt-Fokus	Ihr habt Budget und Aufmerksamkeit vor allem ins Produkt gesteckt.
+fokus:marketing	Marketing-Fokus	Ihr habt Budget und Aufmerksamkeit vor allem in Reichweite und Vertrieb gesteckt.
+fokus:community	Community-Fokus	Ihr habt Budget und Aufmerksamkeit vor allem in Team, Kundenbindung und Community gesteckt.
+fokus:datenschutz	Datenschutz-Fokus	Ihr habt Budget und Aufmerksamkeit vor allem in Verantwortung und Datenschutz gesteckt.
+fokus:balanced	Ausgewogener Fokus	Ihr habt Budget und Aufmerksamkeit ausgewogen verteilt.
+cash:discipline	Cash-Disziplin	Ihr habt besonders auf die Kasse geachtet und unnötige Ausgaben vermieden.
